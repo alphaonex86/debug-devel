@@ -25,12 +25,13 @@
 #include <QHostAddress>
 #include <QIODevice>
 #include <zlib.h>
-#include <qtiocompressor.h>
-#include <QBuffer>
-#include "lz4.h"
-#include "lz4hc.h"
 
-int QLZ4_uncompress_unknownOutputSize(QByteArray *source,QByteArray *destination,int maxOutputSize);
+#include "CompressionTcpSocket/CompressionTcpSocketInterface.h"
+#include "CompressionTcpSocket/NoCompressionTcpSocket.h"
+#include "CompressionTcpSocket/lz4/Lz4CompressionTcpSocket.h"
+#include "CompressionTcpSocket/lz4/Lz4HcCompressionTcpSocket.h"
+#include "CompressionTcpSocket/zlib/GzipCompressionTcpSocket.h"
+#include "CompressionTcpSocket/zlib/ZlibCompressionTcpSocket.h"
 
 #ifdef RS232_USE
 #include <qextserialport.h>
@@ -71,14 +72,9 @@ private:
 	QByteArray IncomingData;	///< Store the incoming data
 	QByteArray OutgoingData;	///< Store the outgoing data
 	QString LastEditionMode;	///< Store the last edition mode used for Tx
-	QByteArray decompress(QByteArray compressed_data);
+	CompressionTcpSocketInterface * compression;
 	QByteArray compress(QByteArray raw_data);
-	QtIOCompressor* decompressor;
-	QBuffer* buffer_decompression;
-	QByteArray buffer_decompression_out;
-	QtIOCompressor* compressor;
-	QBuffer* buffer_compression;
-	QByteArray buffer_compression_out;
+	QByteArray decompress(QByteArray compressed_data);
 private slots:
 	//look the mode update information and widget displayed
 	void UpdateMode();

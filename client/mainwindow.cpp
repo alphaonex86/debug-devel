@@ -13,8 +13,6 @@
 #include "mainwindow.h"
 #include "ui_MainWindow.h"
 
-#include "lz4.h"
-
 /// \brief look the mode update information and widget displayed
 MainWindow::MainWindow(QWidget *parent) :
 	QMainWindow(parent),
@@ -29,10 +27,7 @@ MainWindow::MainWindow(QWidget *parent) :
 	connect(ui->pushButtonSend,SIGNAL(clicked()),this,SLOT(sendNewData()));
 	connectedMode="";
 	isConnected=false;
-	buffer_compression=new QBuffer(&buffer_compression_out);
-	compressor=NULL;//allocated later for the buffer
-	buffer_decompression=new QBuffer(&buffer_decompression_out);
-	decompressor=NULL;//allocated later for the buffer
+	compression=NULL;
 	
 	tcpSocket = new QTcpSocket();
 	connect(tcpSocket,SIGNAL(readyRead()),this,SLOT(newDataIncomming()));
@@ -131,9 +126,6 @@ bool MainWindow::nowConnected()
 		qDebug() << "QAbstractSocket::ConnectedState:" << QAbstractSocket::ConnectedState;
 		//check if is connected
 		isConnected=(tcpSocket->state()==QAbstractSocket::ConnectedState);
-		if(ui->compressedStream->isChecked())
-		{
-		}
 		//check if valid
 		if(!tcpSocket->isValid())
 		{
@@ -167,9 +159,6 @@ bool MainWindow::nowConnected()
 		qDebug() << "QLocalSocket::ConnectedState:" << QLocalSocket::ConnectedState;
 		//check if is connected
 		isConnected=(localSocket->state()==QLocalSocket::ConnectedState);
-		if(ui->compressedStream->isChecked())
-		{
-		}
 		//check if valid
 		if(!localSocket->isValid())
 		{
@@ -216,10 +205,6 @@ bool MainWindow::Disconnect()
 		return false;
 	}
 	qDebug() << "Try disconnection...";
-
-	if(ui->compressedStream->isChecked())
-	{
-	}
 
 	if(connectedMode=="Tcp Socket") // if connection is on tcp socket mode
 	{
@@ -336,90 +321,81 @@ bool MainWindow::sendNewData()
 		QMessageBox::information(this,"Error","No text detected!");
 		return false;
 	}
-	QByteArray chunk;
-	do
+	if(ui->compressedStream->isChecked())
+		block=MainWindow::compress(block);
+	qDebug() << QString(block.toHex());
+	int byteWriten=-2;
+	QString ErrorQString;
+	if(connectedMode=="Tcp Socket") // if connection is on tcp socket mode
 	{
-		if(block.size()<=ui->chunkSize->value())
-			chunk=block;
+		if(tcpSocket->isWritable() && tcpSocket->isOpen()) //send only if connexion is open
+		{
+			byteWriten=tcpSocket->write(block);
+			if(!tcpSocket->waitForBytesWritten(5000) || byteWriten<=0)
+				ErrorQString=tcpSocket->errorString();
+		}
 		else
-			chunk=block.mid(0,ui->chunkSize->value());
-		block.remove(0,chunk.size());
-		if(ui->compressedStream->isChecked())
-			chunk=compress(chunk);
-		qDebug() << QString(block.toHex());
-		int byteWriten=-2;
-		QString ErrorQString;
-		if(connectedMode=="Tcp Socket") // if connection is on tcp socket mode
+			ErrorQString=tr("The tcp socket is not open");
+	}
+	else if(connectedMode=="Local Socket") // if connection is on local socket mode
+	{
+		if(localSocket->isWritable() && localSocket->isOpen()) //send only if connexion is open
 		{
-			if(tcpSocket->isWritable() && tcpSocket->isOpen()) //send only if connexion is open
-			{
-				byteWriten=tcpSocket->write(chunk);
-				if(!tcpSocket->waitForBytesWritten(5000) || byteWriten<=0)
-					ErrorQString=tcpSocket->errorString();
-			}
-			else
-				ErrorQString=tr("The tcp socket is not open");
-		}
-		else if(connectedMode=="Local Socket") // if connection is on local socket mode
-		{
-			if(localSocket->isWritable() && localSocket->isOpen()) //send only if connexion is open
-			{
-				byteWriten=localSocket->write(chunk);
-				if(!localSocket->waitForBytesWritten(5000) || byteWriten<=0)
-					ErrorQString=localSocket->errorString();
-			}
-			else
-			{
-				if(localSocket->isWritable())
-					ErrorQString=tr("The unix socket/named pipe is not open");
-				else
-					ErrorQString=tr("The unix socket/named pipe is not writable");
-			}
-		}
-		#ifdef RS232_USE
-		else if(connectedMode=="RS232") // if connection is on com rs232 mode
-		{
-			if(port->isWritable() && port->isOpen()) //send only if port is open
-			{
-				byteWriten=port->write(chunk);
-				if(byteWriten<=0)
-					ErrorQString=port->errorString();
-			}
-			else
-				ErrorQString=tr("The port com is not open");
-		}
-		#endif // RS232_USE
-		if(byteWriten!=chunk.size()) //check if all the byte have been writen
-		{
-			if(byteWriten==-1)
-				QMessageBox::warning(this,"Error",tr("Byte to write: ")+QString::number(chunk.size())+"\n"+tr("Byte realy writen: ")+QString::number(byteWriten)+"\n"+tr("Error message: ")+ErrorQString);
-			else if(byteWriten==0)
-			{
-				if(ErrorQString!="")
-					QMessageBox::warning(this,"Error",tr("No byte writen.")+"\n"+ErrorQString);
-				else
-					QMessageBox::warning(this,"Error",tr("No byte writen."));
-			}
-			else
-			{
-				if(ErrorQString!="")
-				{
-					QMessageBox::warning(this,"Error",tr("Only ")+QString::number(byteWriten)+tr(" bytes writen!")+"\n"+ErrorQString);
-					ui->statusBarApp->showMessage(tr("Only ")+QString::number(byteWriten)+tr(" bytes writen!")+" "+tr("error:")+" "+ErrorQString);
-				}
-				else
-				{
-					QMessageBox::warning(this,"Error",tr("Only ")+QString::number(byteWriten)+tr(" bytes writen!"));
-					ui->statusBarApp->showMessage(tr("Only ")+QString::number(byteWriten)+tr(" bytes writen!"));
-				}
-			}
+			byteWriten=localSocket->write(block);
+			if(!localSocket->waitForBytesWritten(5000) || byteWriten<=0)
+				ErrorQString=localSocket->errorString();
 		}
 		else
 		{
-			ui->statusBarApp->showMessage(tr("Bytes send: ")+QString::number(byteWriten));
-			return true;
+			if(localSocket->isWritable())
+				ErrorQString=tr("The unix socket/named pipe is not open");
+			else
+				ErrorQString=tr("The unix socket/named pipe is not writable");
 		}
-	} while(block.size()>0);
+	}
+	#ifdef RS232_USE
+	else if(connectedMode=="RS232") // if connection is on com rs232 mode
+	{
+		if(port->isWritable() && port->isOpen()) //send only if port is open
+		{
+			byteWriten=port->write(block);
+			if(byteWriten<=0)
+				ErrorQString=port->errorString();
+		}
+		else
+			ErrorQString=tr("The port com is not open");
+	}
+	#endif // RS232_USE
+	if(byteWriten!=block.size()) //check if all the byte have been writen
+	{
+		if(byteWriten==-1)
+			QMessageBox::warning(this,"Error",tr("Byte to write: ")+QString::number(block.size())+"\n"+tr("Byte realy writen: ")+QString::number(byteWriten)+"\n"+tr("Error message: ")+ErrorQString);
+		else if(byteWriten==0)
+		{
+			if(ErrorQString!="")
+				QMessageBox::warning(this,"Error",tr("No byte writen.")+"\n"+ErrorQString);
+			else
+				QMessageBox::warning(this,"Error",tr("No byte writen."));
+		}
+		else
+		{
+			if(ErrorQString!="")
+			{
+				QMessageBox::warning(this,"Error",tr("Only ")+QString::number(byteWriten)+tr(" bytes writen!")+"\n"+ErrorQString);
+				ui->statusBarApp->showMessage(tr("Only ")+QString::number(byteWriten)+tr(" bytes writen!")+" "+tr("error:")+" "+ErrorQString);
+			}
+			else
+			{
+				QMessageBox::warning(this,"Error",tr("Only ")+QString::number(byteWriten)+tr(" bytes writen!"));
+				ui->statusBarApp->showMessage(tr("Only ")+QString::number(byteWriten)+tr(" bytes writen!"));
+			}
+		}
+	}
+	else
+	{
+		ui->statusBarApp->showMessage(tr("Bytes send: ")+QString::number(byteWriten));
+		return true;
+	}
 	return false;
 }
 
@@ -547,24 +523,15 @@ bool MainWindow::newDataIncomming()
 	#endif // RS232_USE
 	if(ui->comboBoxModeAppend->currentText()=="Update")
 		IncomingData.clear();
-	QByteArray chunk;
-	do
-	{
-		if(block.size()<=ui->chunkSize->value())
-			chunk=block;
-		else
-			chunk=block.mid(0,ui->chunkSize->value());
-		block.remove(0,chunk.size());
-		if(ui->compressedStream->isChecked())
-			chunk=decompress(chunk);
-		//load in hexa if needed and append or update the text
-		IncomingData.append(chunk);
-		//load in hex or not
-		if(ui->comboBoxTypeRx->currentText()=="toHex")
-			ui->plainTextEditRx->setPlainText(IncomingData.toHex());
-		else
-			ui->plainTextEditRx->setPlainText(IncomingData);
-	} while(block.size()>0);
+	if(ui->compressedStream->isChecked())
+		block=MainWindow::decompress(block);
+	//load in hexa if needed and append or update the text
+	IncomingData.append(block);
+	//load in hex or not
+	if(ui->comboBoxTypeRx->currentText()=="toHex")
+		ui->plainTextEditRx->setPlainText(IncomingData.toHex());
+	else
+		ui->plainTextEditRx->setPlainText(IncomingData);
 	return true;
 
 }
@@ -635,26 +602,17 @@ void MainWindow::updateConnectButton()
 		switch(ui->compressionType->currentIndex())
 		{
 		case 2:
-			compressor=new QtIOCompressor(buffer_compression,9,ui->chunkSize->value());
-			compressor->setStreamFormat(QtIOCompressor::ZlibFormat);
-			compressor->open(QIODevice::WriteOnly);
-
-			decompressor=new QtIOCompressor(buffer_decompression);
-			decompressor->setStreamFormat(QtIOCompressor::ZlibFormat);
-			decompressor->open(QIODevice::ReadOnly);
+			compression=new ZlibCompressionTcpSocket(ui->chunkSize->value(),9);
 			break;
 		case 3:
-			compressor=new QtIOCompressor(buffer_compression,9,ui->chunkSize->value());
-			compressor->setStreamFormat(QtIOCompressor::GzipFormat);
-			compressor->open(QIODevice::WriteOnly);
-
-			decompressor=new QtIOCompressor(buffer_decompression);
-			decompressor->setStreamFormat(QtIOCompressor::GzipFormat);
-			decompressor->open(QIODevice::ReadOnly);
+			compression=new GzipCompressionTcpSocket(ui->chunkSize->value(),9);
 			break;
 		case 0:
+			compression=new Lz4HcCompressionTcpSocket(ui->chunkSize->value());
+			break;
 		case 1:
 		default:
+			compression=new Lz4CompressionTcpSocket(ui->chunkSize->value());
 		break;
 		}
 		ui->pushButtonConnect->setIcon(QIcon(":/images/network-connect.png"));
@@ -667,7 +625,6 @@ void MainWindow::updateConnectButton()
 	{
 		if(tcpSocket->state()!=QAbstractSocket::UnconnectedState || localSocket->state()!=QLocalSocket::UnconnectedState)
 		{
-			buffer_decompression_out.resize(0);
 			ui->compressedStream->setEnabled(false);
 			ui->compressionType->setEnabled(false);
 			ui->chunkSize->setEnabled(false);
@@ -676,17 +633,10 @@ void MainWindow::updateConnectButton()
 		}
 		else
 		{
-			if(compressor!=NULL)
+			if(compression!=NULL)
 			{
-				compressor->close();
-				delete compressor;
-				compressor=NULL;
-			}
-			if(decompressor!=NULL)
-			{
-				decompressor->close();
-				delete decompressor;
-				decompressor=NULL;
+				delete compression;
+				compression=NULL;
 			}
 			ui->compressedStream->setEnabled(true);
 			ui->compressionType->setEnabled(true);
@@ -862,242 +812,24 @@ void MainWindow::saveTheFileRx()
 
 QByteArray MainWindow::compress(QByteArray raw_data)
 {
-	QByteArray compressed_data;
-	int returnSize;
-	switch(ui->compressionType->currentIndex())
+	QByteArray compressed_data=compression->compressData(raw_data);
+	if(compression->isInError())
 	{
-	case 2:
-	case 3:
-		compressor->write(raw_data);
-		compressor->flush();//add big overhead
-		compressed_data=buffer_compression_out;
-		buffer_compression->seek(0);
-		buffer_compression_out.resize(0);
-		return compressed_data;
-		break;
-	case 0:
-		compressed_data.resize(LZ4_compressBound(raw_data.size()));
-		returnSize=LZ4_compressHC(raw_data.constData(),compressed_data.data(),raw_data.size());
-		compressed_data.resize(returnSize);
-		return compressed_data;
-		break;
-	case 1:
-		compressed_data.resize(LZ4_compressBound(raw_data.size()));
-		returnSize=LZ4_compress(raw_data.constData(),compressed_data.data(),raw_data.size());
-		compressed_data.resize(returnSize);
-		return compressed_data;
-		break;
-	default:
-	break;
+		ui->statusBarApp->showMessage("Error at the compression",10000);
+		return raw_data;
 	}
-	return raw_data;
+	else
+		return compressed_data;
 }
 
 QByteArray MainWindow::decompress(QByteArray compressed_data)
 {
-	QByteArray raw_data,chunk_data;
-	int returnSize;
-	int successLoop;
-	switch(ui->compressionType->currentIndex())
+	QByteArray raw_data=compression->decompressData(raw_data);
+	if(compression->isInError())
 	{
-	case 2:
-	case 3:
-		buffer_decompression->seek(0);
-		buffer_decompression_out=compressed_data;
-		raw_data=decompressor->readAll();
-		if(raw_data.size()>0)
-		{
-			buffer_decompression->seek(0);
-			buffer_decompression_out.resize(0);
-			ui->statusBarApp->showMessage(tr("Decompressed data: %1").arg(raw_data.size()));
-			return raw_data;
-		}
-		else
-		{
-			ui->statusBarApp->showMessage(tr("Error at decompressing: %1").arg(decompressor->errorString()));
-			return compressed_data;
-		}
-		break;
-	case 0:
-	case 1:
-		chunk_data.resize(ui->chunkSize->value());
-		buffer_decompression_out.append(compressed_data);
-		successLoop=0;
-		do
-		{
-			returnSize=QLZ4_uncompress_unknownOutputSize(&buffer_decompression_out,&chunk_data,ui->chunkSize->value());
-			if(buffer_decompression_out.size()>LZ4_compressBound(ui->chunkSize->value()))
-			{
-				ui->statusBarApp->showMessage(tr("Error at decompressing, and max size matched: %1").arg(buffer_decompression_out.size()));
-				return compressed_data;
-			}
-			if(returnSize==0 || returnSize==-2 || returnSize==-4)
-				break;
-			if(returnSize<=0)
-			{
-				ui->statusBarApp->showMessage(tr("Error at decompressing: %1").arg(returnSize));
-				return compressed_data;
-			}
-			chunk_data.resize(returnSize);
-			raw_data+=chunk_data;
-			successLoop++;
-		} while(returnSize>0 && buffer_decompression_out.size()>0);
-		if(buffer_decompression_out.size()>0)
-			ui->statusBarApp->showMessage(tr("block decompressed: %1, remaining compressed data: %2").arg(successLoop).arg(buffer_decompression_out.size()));
-		else
-			ui->statusBarApp->showMessage(tr("block decompressed: %1").arg(successLoop));
+		ui->statusBarApp->showMessage("Error at the decompression",10000);
+		return compressed_data;
+	}
+	else
 		return raw_data;
-		break;
-	default:
-	break;
-	}
-	return compressed_data;
-}
-
-//**************************************
-// Constants
-//**************************************
-#define COPYLENGTH 8
-#define ML_BITS 4
-#define ML_MASK ((1U<<ML_BITS)-1)
-#define RUN_BITS (8-ML_BITS)
-#define RUN_MASK ((1U<<RUN_BITS)-1)
-
-//**************************************
-// Basic Types
-//**************************************
-typedef struct _U16_S { quint16 v; } U16_S;
-typedef struct _U32_S { quint32 v; } U32_S;
-typedef struct _U64_S { quint64 v; } U64_S;
-
-#define A64(x) (((U64_S *)(x))->v)
-#define A32(x) (((U32_S *)(x))->v)
-#define A16(x) (((U16_S *)(x))->v)
-
-//**************************************
-// Architecture-specific macros
-//**************************************
-#if LZ4_ARCH64	// 64-bit
-#define STEPSIZE 8
-#define UARCH U64
-#define AARCH A64
-#define LZ4_COPYSTEP(s,d)		A64(d) = A64(s); d+=8; s+=8;
-#define LZ4_COPYPACKET(s,d)		LZ4_COPYSTEP(s,d)
-#define LZ4_SECURECOPY(s,d,e)	if (d<e) LZ4_WILDCOPY(s,d,e)
-#define HTYPE U32
-#define INITBASE(base)			const quint8* const base = ip
-#else		// 32-bit
-#define STEPSIZE 4
-#define UARCH U32
-#define AARCH A32
-#define LZ4_COPYSTEP(s,d)		A32(d) = A32(s); d+=4; s+=4;
-#define LZ4_COPYPACKET(s,d)		LZ4_COPYSTEP(s,d); LZ4_COPYSTEP(s,d);
-#define LZ4_SECURECOPY			LZ4_WILDCOPY
-#define HTYPE const quint8*
-#define INITBASE(base)			const int base = 0
-#endif
-
-//**************************************
-// Macros
-//**************************************
-#define LZ4_WILDCOPY(s,d,e)		do { LZ4_COPYPACKET(s,d) } while (d<e);
-
-#if (defined(LZ4_BIG_ENDIAN) && !defined(BIG_ENDIAN_NATIVE_BUT_INCOMPATIBLE))
-#define LZ4_READ_LITTLEENDIAN_16(d,s,p) { U16 v = A16(p); v = bswap16(v); d = (s) - v; }
-#define LZ4_WRITE_LITTLEENDIAN_16(p,i) { U16 v = (U16)(i); v = bswap16(v); A16(p) = v; p+=2; }
-#else		// Little Endian
-#define LZ4_READ_LITTLEENDIAN_16(d,s,p) { d = (s) - A16(p); }
-#define LZ4_WRITE_LITTLEENDIAN_16(p,v) { A16(p) = v; p+=2; }
-#endif
-
-int QLZ4_uncompress_unknownOutputSize(QByteArray *source,
-				QByteArray *destination,
-				int maxOutputSize)
-{
-	// Local Variables
-	const quint8* ip = (const quint8*) source->data();
-	const quint8* const iend = ip + source->size();
-	const quint8* ref;
-
-	quint8* op = (quint8*) destination->data();
-	quint8* base_op = (quint8*) destination->data();
-	quint8* const oend = op + maxOutputSize;
-	quint8* cpy;
-
-	size_t dec[] ={0, 3, 2, 3, 0, 0, 0, 0};
-
-	quint8 token;
-	int length;
-
-	// Main Loop
-	while (ip<iend)
-	{
-		// get runlength
-		token = *ip++;
-		if ((length=(token>>ML_BITS)) == RUN_MASK) { int s=255; while ((ip<iend) && (s==255)) { s=*ip++; length += s; } }
-
-		// copy literals
-		cpy = op+length;
-		if ((cpy>oend-COPYLENGTH) || (ip+length>iend-COPYLENGTH))
-		{
-			if (cpy > oend)
-				return -1;
-			if (ip+length > iend)
-				return -2;
-			memcpy(op, ip, length);
-			op += length;
-			ip += length;
-			//the remaining copy is of other packet
-			/*if (ip<iend)
-				return -3;*/
-			break;    // Necessarily EOF, due to parsing restrictions
-		}
-		do { LZ4_COPYPACKET(ip,op) } while (op<cpy);
-		ip -= (op-cpy); op = cpy;
-
-		// get offset
-		LZ4_READ_LITTLEENDIAN_16(ref,cpy,ip); ip+=2;
-		if (ref<base_op)
-			return -4;
-
-		// get matchlength
-		if ((length=(token&ML_MASK)) == ML_MASK) { while (ip<iend) { int s = *ip++; length +=s; if (s==255) continue; break; } }
-
-		// copy repeated sequence
-		if(__builtin_expect (((op-ref<STEPSIZE) != 0),0))
-				//(expect(, 0))
-		{
-#if LZ4_ARCH64
-			size_t dec2table[]={0, 0, 0, -1, 0, 1, 2, 3};
-			size_t dec2 = dec2table[op-ref];
-#else
-			const int dec2 = 0;
-#endif
-			*op++ = *ref++;
-			*op++ = *ref++;
-			*op++ = *ref++;
-			*op++ = *ref++;
-			ref -= dec[op-ref];
-			A32(op)=A32(ref); op += STEPSIZE-4;
-			ref -= dec2;
-		} else { LZ4_COPYSTEP(ref,op); }
-		cpy = op + length - (STEPSIZE-4);
-		if (cpy>oend-COPYLENGTH)
-		{
-			if (cpy > oend)
-				return -5;
-			LZ4_SECURECOPY(ref, op, (oend-COPYLENGTH));
-			while(op<cpy) *op++=*ref++;
-			op=cpy;
-			if (op == oend) break;    // Check EOF (should never happen, since last 5 bytes are supposed to be literals)
-			continue;
-		}
-		LZ4_SECURECOPY(ref, op, cpy);
-		op=cpy;		// correction
-	}
-
-	// end of decoding
-	destination->resize((int)(op-base_op));
-	source->remove(0,(int)(ip-(const quint8*)source->data()));
-	return destination->size();
 }

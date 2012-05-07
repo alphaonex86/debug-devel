@@ -10,14 +10,26 @@ TARGET = debug-devel
 TEMPLATE = app
 SOURCES += main.cpp \
     mainwindow.cpp \
-    qtiocompressor.cpp \
-    lz4hc.c \
-    lz4.c
+    CompressionTcpSocket/zlib/qtiocompressor.cpp \
+    CompressionTcpSocket/lz4/lz4hc.c \
+    CompressionTcpSocket/lz4/lz4.c \
+    CompressionTcpSocket/lz4/Lz4CompressionTcpSocket.cpp \
+    CompressionTcpSocket/lz4/Lz4HcCompressionTcpSocket.cpp \
+    CompressionTcpSocket/zlib/ZlibCompressionTcpSocket.cpp \
+    CompressionTcpSocket/zlib/GzipCompressionTcpSocket.cpp \
+    CompressionTcpSocket/NoCompressionTcpSocket.cpp \
+    CompressionTcpSocket/CompressionTcpSocketInterface.cpp
 HEADERS += mainwindow.h \
     rs232-mode.h \
-    qtiocompressor.h \
-    lz4hc.h \
-    lz4.h
+    CompressionTcpSocket/zlib/qtiocompressor.h \
+    CompressionTcpSocket/lz4/lz4hc.h \
+    CompressionTcpSocket/lz4/lz4.h \
+    CompressionTcpSocket/lz4/Lz4CompressionTcpSocket.h \
+    CompressionTcpSocket/lz4/Lz4HcCompressionTcpSocket.h \
+    CompressionTcpSocket/zlib/ZlibCompressionTcpSocket.h \
+    CompressionTcpSocket/zlib/GzipCompressionTcpSocket.h \
+    CompressionTcpSocket/NoCompressionTcpSocket.h \
+    CompressionTcpSocket/CompressionTcpSocketInterface.h
 FORMS += MainWindow.ui
 RESOURCES += resources.qrc
 win32:RC_FILE += resources-windows.rc
