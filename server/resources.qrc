@@ -1,0 +1,28 @@
+<RCC>
+    <qresource prefix="/" >
+        <file>images/append.png</file>
+        <file>images/application-octet-stream.png</file>
+        <file>images/clear.png</file>
+        <file>images/com.png</file>
+        <file>images/connect.png</file>
+        <file>images/download.png</file>
+        <file>images/hexa.png</file>
+        <file>images/icone.png</file>
+        <file>images/localServer.png</file>
+        <file>images/network-connect.png</file>
+        <file>images/network.png</file>
+        <file>images/not-valide.png</file>
+        <file>images/overwirte.png</file>
+        <file>images/send.png</file>
+        <file>images/stop.png</file>
+        <file>images/text.png</file>
+        <file>images/upload.png</file>
+        <file>images/valide.png</file>
+        <file>images/warning.png</file>
+        <file>images/pipe-socket.png</file>
+        <file>images/preferences-desktop-user.png</file>
+        <file>images/system-users.png</file>
+        <file>images/list-remove-user.png</file>
+        <file>images/list-disconnected.png</file>
+    </qresource>
+</RCC>

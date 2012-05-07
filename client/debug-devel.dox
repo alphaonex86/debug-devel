@@ -1,0 +1,35 @@
+/* -*- mode: C++ ; c-file-style: "stroustrup" -*- *****************************
+ * Debug devel
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GPLv3
+ *****************************************************************************/
+
+/*
+  This file contains NO source code, just some documentation for doxygen to
+  parse.
+*/
+
+/*!
+  \mainpage Debug devel
+
+  \section mainpage_overview Overview
+
+  This application provide some functionnality for test communication
+
+  \section mainpage_platforms Platforms
+
+  Ultracopier might be usable in all environments where you find <a href="http://www.trolltech.com/products/qt">Qt4</a>.\n
+  Ultracopier requires Qt 4.4.x or newer.\n
+  Ultracopier requires <a href="http://qextserialport.sourceforge.net/">qextserialport</a> modules for rs232 for Qt
+
+  \section mainpage_downloads Downloads
+
+  See the domain website
+  <a href="http://www.first-world.info/">Domain WebSite</a>.
+
+  \section license GPL Version 3
+  Is under GPL Version 3.
+
+*/
+

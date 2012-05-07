@@ -1,0 +1,2 @@
+This is tools to do multiple test with QLocalServer/QLocalSocket, QTcpServer/QTcpSocket and RS232.
+It allow import/export binary on file, send raw hexa or raw text, for the server: multiple client is managed.

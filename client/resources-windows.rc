@@ -1,0 +1,14 @@
+/********************************************************************************
+		                resources-windows.rc
+		                -------------------
+		
+		Begin        : Mon Nov 29 2008 18:20 alpha_one_x86
+		Project      : debug-devel
+		Email        : alpha.super-one@laposte.net
+		Note         : See doc for copyright and developer
+		Target       : Give icon for windows version
+
+*********************************************************************************/
+
+IDI_ICON1               ICON    DISCARDABLE     "icone.ico"
+
