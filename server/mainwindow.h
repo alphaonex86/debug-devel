@@ -18,6 +18,8 @@
 #include "lz4.h"
 #include "lz4hc.h"
 
+int QLZ4_uncompress_unknownOutputSize(QByteArray *source,QByteArray *destination,int maxOutputSize);
+
 typedef struct {
 QTcpSocket		*tcpSocket;
 QByteArray		IncomingData;

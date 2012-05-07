@@ -30,6 +30,8 @@
 #include "lz4.h"
 #include "lz4hc.h"
 
+int QLZ4_uncompress_unknownOutputSize(QByteArray *source,QByteArray *destination,int maxOutputSize);
+
 #ifdef RS232_USE
 #include <qextserialport.h>
 #include <qextserialenumerator.h>
