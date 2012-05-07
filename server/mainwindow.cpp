@@ -769,6 +769,39 @@ void MainWindow::on_pushButtonSend_clicked()
 		sendNewData();
 }
 
+QByteArray MainWindow::compress(QByteArray raw_data,QBuffer *buffer_compression,QByteArray *buffer_compression_out,QtIOCompressor* compressor)
+{
+	QByteArray compressed_data;
+	int returnSize;
+	switch(ui->compressionType->currentIndex())
+	{
+	case 2:
+	case 3:
+		compressor->write(raw_data);
+		compressor->flush();//add big overhead
+		compressed_data=*buffer_compression_out;
+		buffer_compression->seek(0);
+		buffer_compression_out->resize(0);
+		return compressed_data;
+		break;
+	case 0:
+		compressed_data.resize(LZ4_compressBound(raw_data.size()));
+		returnSize=LZ4_compressHC(raw_data.constData(),compressed_data.data(),raw_data.size());
+		compressed_data.resize(returnSize);
+		return compressed_data;
+		break;
+	case 1:
+		compressed_data.resize(LZ4_compressBound(raw_data.size()));
+		returnSize=LZ4_compress(raw_data.constData(),compressed_data.data(),raw_data.size());
+		compressed_data.resize(returnSize);
+		return compressed_data;
+		break;
+	default:
+	break;
+	}
+	return raw_data;
+}
+
 QByteArray MainWindow::decompress(QByteArray compressed_data,QBuffer *buffer_decompression,QByteArray *buffer_decompression_out,QtIOCompressor* decompressor)
 {
 	QByteArray raw_data,chunk_data;
@@ -802,7 +835,12 @@ QByteArray MainWindow::decompress(QByteArray compressed_data,QBuffer *buffer_dec
 		do
 		{
 			returnSize=QLZ4_uncompress_unknownOutputSize(buffer_decompression_out,&chunk_data,ui->chunkSize->value());
-			if(returnSize==0)
+			if(buffer_decompression_out->size()>LZ4_compressBound(ui->chunkSize->value()))
+			{
+				ui->statusBarApp->showMessage(tr("Error at decompressing, and max size matched: %1").arg(buffer_decompression_out->size()));
+				return compressed_data;
+			}
+			if(returnSize==0 || returnSize==-2 || returnSize==-4)
 				break;
 			if(returnSize<=0)
 			{
@@ -828,39 +866,6 @@ QByteArray MainWindow::decompress(QByteArray compressed_data,QBuffer *buffer_dec
 	break;
 	}
 	return compressed_data;
-}
-
-QByteArray MainWindow::compress(QByteArray raw_data,QBuffer *buffer_compression,QByteArray *buffer_compression_out,QtIOCompressor* compressor)
-{
-	QByteArray compressed_data;
-	int returnSize;
-	switch(ui->compressionType->currentIndex())
-	{
-	case 2:
-	case 3:
-		compressor->write(raw_data);
-		compressor->flush();//add big overhead
-		compressed_data=*buffer_compression_out;
-		buffer_compression->seek(0);
-		buffer_compression_out->resize(0);
-		return compressed_data;
-		break;
-	case 0:
-		compressed_data.resize(LZ4_compressBound(raw_data.size()));
-		returnSize=LZ4_compressHC(raw_data.constData(),compressed_data.data(),raw_data.size());
-		compressed_data.resize(returnSize);
-		return compressed_data;
-		break;
-	case 1:
-		compressed_data.resize(LZ4_compressBound(raw_data.size()));
-		returnSize=LZ4_compress(raw_data.constData(),compressed_data.data(),raw_data.size());
-		compressed_data.resize(returnSize);
-		return compressed_data;
-		break;
-	default:
-	break;
-	}
-	return raw_data;
 }
 
 //**************************************
@@ -929,6 +934,7 @@ int QLZ4_uncompress_unknownOutputSize(QByteArray *source,
 	const quint8* ref;
 
 	quint8* op = (quint8*) destination->data();
+	quint8* base_op = (quint8*) destination->data();
 	quint8* const oend = op + maxOutputSize;
 	quint8* cpy;
 
@@ -965,7 +971,7 @@ int QLZ4_uncompress_unknownOutputSize(QByteArray *source,
 
 		// get offset
 		LZ4_READ_LITTLEENDIAN_16(ref,cpy,ip); ip+=2;
-		if (ref < (quint8* const)destination->data())
+		if (ref<base_op)
 			return -4;
 
 		// get matchlength
@@ -1005,9 +1011,7 @@ int QLZ4_uncompress_unknownOutputSize(QByteArray *source,
 	}
 
 	// end of decoding
-	destination->resize((int)(((char*)op)-destination->data()));
-	source->remove(0,(int)(((char*)ip)-source->data()));
+	destination->resize((int)(op-base_op));
+	source->remove(0,(int)(ip-(const quint8*)source->data()));
 	return destination->size();
 }
-
-
