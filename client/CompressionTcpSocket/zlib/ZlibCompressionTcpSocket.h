@@ -1,26 +1,14 @@
 #ifndef ZLIBCOMPRESSIONTCPSOCKET_H
 #define ZLIBCOMPRESSIONTCPSOCKET_H
 
-#include <QBuffer>
+#include "ZlibAbstractCompressionTcpSocket.h"
 
-#include "../CompressionTcpSocketInterface.h"
-#include "qtiocompressor.h"
-
-class ZlibCompressionTcpSocket : public CompressionTcpSocketInterface
+class ZlibCompressionTcpSocket : public ZlibAbstractCompressionTcpSocket
 {
 public:
-	ZlibCompressionTcpSocket(int chunkSize=65536,int compression=6);
-	~ZlibCompressionTcpSocket();
-protected:
-	virtual QByteArray real_compressData(const QByteArray &rawData);
-	virtual QByteArray real_decompressData(const QByteArray &compressedData);
+	ZlibCompressionTcpSocket(int bufferSize=65536,int compression=6);
 private:
-	QtIOCompressor* decompressor;
-	QBuffer* buffer_decompression;
-	QByteArray buffer_decompression_out;
-	QtIOCompressor* compressor;
-	QBuffer* buffer_compression;
-	QByteArray buffer_compression_out;
+	void abstractBlockingMethod();
 };
 
 #endif // ZLIBCOMPRESSIONTCPSOCKET_H

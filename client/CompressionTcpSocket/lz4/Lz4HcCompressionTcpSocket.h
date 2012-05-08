@@ -7,9 +7,9 @@
 class Lz4HcCompressionTcpSocket : public Lz4CompressionTcpSocket
 {
 public:
-	Lz4HcCompressionTcpSocket(int chunkSize=65536,int compression=6);
+	Lz4HcCompressionTcpSocket();
 protected:
-	virtual QByteArray real_compressData(const QByteArray &rawData);
+	virtual QByteArray compressDataWithoutHeader(const QByteArray rawData);
 };
 
 #endif // LZ4HCCOMPRESSIONTCPSOCKET_H

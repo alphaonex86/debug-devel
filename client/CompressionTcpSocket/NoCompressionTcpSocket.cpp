@@ -1,16 +1,16 @@
 #include "NoCompressionTcpSocket.h"
 
-NoCompressionTcpSocket::NoCompressionTcpSocket(int chunkSize,int compression)
-	: CompressionTcpSocketInterface(chunkSize,compression)
+NoCompressionTcpSocket::NoCompressionTcpSocket()
+	: CompressionTcpSocketInterface()
 {
 }
 
-QByteArray NoCompressionTcpSocket::real_compressData(const QByteArray &rawData)
+QByteArray NoCompressionTcpSocket::compressData(const QByteArray rawData)
 {
 	return rawData;
 }
 
-QByteArray NoCompressionTcpSocket::real_decompressData(const QByteArray &compressedData)
+QByteArray NoCompressionTcpSocket::decompressData(const QByteArray compressedData)
 {
 	return compressedData;
 }

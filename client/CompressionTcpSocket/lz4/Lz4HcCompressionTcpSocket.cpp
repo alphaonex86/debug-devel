@@ -1,16 +1,15 @@
 #include "Lz4HcCompressionTcpSocket.h"
 
-Lz4HcCompressionTcpSocket::Lz4HcCompressionTcpSocket(int chunkSize,int compression)
-	: Lz4CompressionTcpSocket(chunkSize,compression)
+Lz4HcCompressionTcpSocket::Lz4HcCompressionTcpSocket()
+	: Lz4CompressionTcpSocket()
 {
 }
 
-QByteArray Lz4HcCompressionTcpSocket::real_compressData(const QByteArray &rawData)
+QByteArray Lz4HcCompressionTcpSocket::compressDataWithoutHeader(const QByteArray rawData)
 {
 	QByteArray compressedData;
-	int returnSize;
-	compressedData.resize(LZ4_compressBound(rawData.size()));
-	returnSize=LZ4_compressHC(rawData.constData(),compressedData.data(),rawData.size());
+	compressedData.resize(maxCompressedSize(rawData.size()));
+	int returnSize=LZ4_compressHC(rawData.constData(),compressedData.data(),rawData.size());
 	compressedData.resize(returnSize);
 	return compressedData;
 }

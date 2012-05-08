@@ -1,48 +1,27 @@
 #include "Lz4CompressionTcpSocket.h"
 
-Lz4CompressionTcpSocket::Lz4CompressionTcpSocket(int chunkSize,int compression)
-	: CompressionTcpSocketInterface(chunkSize,compression)
+Lz4CompressionTcpSocket::Lz4CompressionTcpSocket()
+	: HeaderCompressedSizeCompressionTcpSocket()
 {
 }
 
-QByteArray Lz4CompressionTcpSocket::real_compressData(const QByteArray &rawData)
+QByteArray Lz4CompressionTcpSocket::compressDataWithoutHeader(const QByteArray rawData)
 {
 	QByteArray compressedData;
-	int returnSize;
-	compressedData.resize(LZ4_compressBound(rawData.size()));
-	returnSize=LZ4_compress(rawData.constData(),compressedData.data(),rawData.size());
+	compressedData.resize(maxCompressedSize(rawData.size()));
+	int returnSize=LZ4_compress(rawData.constData(),compressedData.data(),rawData.size());
 	compressedData.resize(returnSize);
 	return compressedData;
 }
 
-QByteArray Lz4CompressionTcpSocket::real_decompressData(const QByteArray &compressedData)
+int Lz4CompressionTcpSocket::decompressDataWithoutHeader(const QByteArray &source,QByteArray *destination,const int &maxOutputSize)
 {
-	QByteArray rawData,chunk_data;
-	int returnSize;
-	int successLoop;
-	chunk_data.resize(chunkSize);
-	buffer_decompression_out.append(compressedData);
-	successLoop=0;
-	do
-	{
-		returnSize=QLZ4_uncompress_unknownOutputSize(&buffer_decompression_out,&chunk_data,chunkSize);
-		if(buffer_decompression_out.size()>LZ4_compressBound(chunkSize))
-		{
-			m_errorString=QString("Error at decompressing, and max size matched: %1").arg(buffer_decompression_out.size());
-			return QByteArray();
-		}
-		if(returnSize==0 || returnSize==-2 || returnSize==-4)
-			break;
-		if(returnSize<=0)
-		{
-			m_errorString=QString("Error at decompressing: %1").arg(returnSize);
-			return QByteArray();
-		}
-		chunk_data.resize(returnSize);
-		rawData+=chunk_data;
-		successLoop++;
-	} while(returnSize>0 && buffer_decompression_out.size()>0);
-	return rawData;
+	return QLZ4_uncompress_unknownOutputSize(source,destination,maxOutputSize);
+}
+
+int Lz4CompressionTcpSocket::maxCompressedSize(const int &maxSize)
+{
+	return LZ4_compressBound(maxSize);
 }
 
 //**************************************
@@ -101,17 +80,17 @@ typedef struct _U64_S { quint64 v; } U64_S;
 #define LZ4_WRITE_LITTLEENDIAN_16(p,v) { A16(p) = v; p+=2; }
 #endif
 
-int Lz4CompressionTcpSocket::QLZ4_uncompress_unknownOutputSize(QByteArray *source,
-				QByteArray *destination,
-				int maxOutputSize)
+int Lz4CompressionTcpSocket::QLZ4_uncompress_unknownOutputSize(const QByteArray &source,QByteArray *destination,const int &maxOutputSize)
 {
+	if(decompression_buffer.size()!=maxOutputSize)
+		decompression_buffer.resize(maxOutputSize);
 	// Local Variables
-	const quint8* ip = (const quint8*) source->data();
-	const quint8* const iend = ip + source->size();
+	const quint8* ip = (const quint8*) source.data();
+	const quint8* const iend = ip + source.size();
 	const quint8* ref;
 
-	quint8* op = (quint8*) destination->data();
-	quint8* base_op = (quint8*) destination->data();
+	quint8* op = (quint8*) decompression_buffer.data();
+	quint8* base_op = (quint8*) decompression_buffer.data();
 	quint8* const oend = op + maxOutputSize;
 	quint8* cpy;
 
@@ -138,9 +117,8 @@ int Lz4CompressionTcpSocket::QLZ4_uncompress_unknownOutputSize(QByteArray *sourc
 			memcpy(op, ip, length);
 			op += length;
 			ip += length;
-			//the remaining copy is of other packet
-			/*if (ip<iend)
-				return -3;*/
+			if (ip<iend)
+				return -3;
 			break;    // Necessarily EOF, due to parsing restrictions
 		}
 		do { LZ4_COPYPACKET(ip,op) } while (op<cpy);
@@ -188,8 +166,7 @@ int Lz4CompressionTcpSocket::QLZ4_uncompress_unknownOutputSize(QByteArray *sourc
 	}
 
 	// end of decoding
-	destination->resize((int)(op-base_op));
-	source->remove(0,(int)(ip-(const quint8*)source->data()));
+	*destination=decompression_buffer.mid(0,(int)(op-base_op));
 	return destination->size();
 }
 

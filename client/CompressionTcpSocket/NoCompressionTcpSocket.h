@@ -6,10 +6,10 @@
 class NoCompressionTcpSocket : public CompressionTcpSocketInterface
 {
 public:
-	NoCompressionTcpSocket(int chunkSize=65536,int compression=6);
+	NoCompressionTcpSocket();
 private:
-	QByteArray real_compressData(const QByteArray &rawData);
-	QByteArray real_decompressData(const QByteArray &compressedData);
+	QByteArray compressData(const QByteArray rawData);
+	QByteArray decompressData(const QByteArray compressedData);
 };
 
 #endif // NOCOMPRESSIONTCPSOCKET_H
