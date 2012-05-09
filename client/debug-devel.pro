@@ -21,8 +21,7 @@ SOURCES += main.cpp \
     CompressionTcpSocket/CompressionTcpSocketInterface.cpp \
     CompressionTcpSocket/zlib/ZlibAbstractCompressionTcpSocket.cpp \
     CompressionTcpSocket/HeaderCompressedSizeCompressionTcpSocket.cpp \
-    CompressionTcpSocket/HeaderUncompressedSizeCompressionTcpSocket.cpp \
-    CompressionTcpSocket/zlib/QZlibDecode.cpp
+    CompressionTcpSocket/HeaderUncompressedSizeCompressionTcpSocket.cpp
 HEADERS += mainwindow.h \
     rs232-mode.h \
     CompressionTcpSocket/zlib/qtiocompressor.h \
@@ -36,8 +35,7 @@ HEADERS += mainwindow.h \
     CompressionTcpSocket/CompressionTcpSocketInterface.h \
     CompressionTcpSocket/zlib/ZlibAbstractCompressionTcpSocket.h \
     CompressionTcpSocket/HeaderCompressedSizeCompressionTcpSocket.h \
-    CompressionTcpSocket/HeaderUncompressedSizeCompressionTcpSocket.h \
-    CompressionTcpSocket/zlib/QZlibDecode.h
+    CompressionTcpSocket/HeaderUncompressedSizeCompressionTcpSocket.h
 FORMS += MainWindow.ui
 RESOURCES += resources.qrc
 win32:RC_FILE += resources-windows.rc

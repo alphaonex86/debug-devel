@@ -459,7 +459,7 @@ void QtIOCompressor::flush()
     if (isOpen() == false || openMode() & ReadOnly)
         return;
 
-    d->flushZlib(Z_PARTIAL_FLUSH);//Z_FULL_FLUSH
+    d->flushZlib(Z_SYNC_FLUSH);//Z_FULL_FLUSH
 }
 
 /*!

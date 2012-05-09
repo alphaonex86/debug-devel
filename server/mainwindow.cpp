@@ -366,6 +366,11 @@ void MainWindow::on_LoadFile_clicked()
 		ui->statusBarApp->showMessage("Canceled!",10000);
 		return;
 	}
+	if(fileDes.size()>1024*1024)
+	{
+		ui->statusBarApp->showMessage("File to big to be read",10000);
+		return;
+	}
 	ui->comboBoxTypeTx->setCurrentIndex(1);
 	on_comboBoxTypeTx_currentIndexChanged("toHex");
 	if(fileDes.open(QIODevice::ReadOnly))
