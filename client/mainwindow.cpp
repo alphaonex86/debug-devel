@@ -621,10 +621,11 @@ void MainWindow::updateConnectButton()
 		ui->pushButtonConnect->setText(tr("Disconnect"));
 		ui->compressedStream->setEnabled(false);
 		ui->compressionType->setEnabled(false);
-		ui->compressionBufferSize->setHidden(true);
-		ui->label_compressio_buffer->setHidden(true);
-		ui->compressionByPacket->setHidden(true);
-		ui->label_compression_by_packet->setHidden(true);
+		ui->compressionBufferSize->setEnabled(false);
+		ui->label_compressio_buffer->setEnabled(false);
+		ui->compressionByPacket->setEnabled(false);
+		ui->label_compression_by_packet->setEnabled(false);
+
 	}
 	else
 	{
@@ -632,10 +633,10 @@ void MainWindow::updateConnectButton()
 		{
 			ui->compressedStream->setEnabled(false);
 			ui->compressionType->setEnabled(false);
-			ui->compressionBufferSize->setHidden(true);
-			ui->label_compressio_buffer->setHidden(true);
-			ui->compressionByPacket->setHidden(true);
-			ui->label_compression_by_packet->setHidden(true);
+			ui->compressionBufferSize->setEnabled(false);
+			ui->label_compressio_buffer->setEnabled(false);
+			ui->compressionByPacket->setEnabled(false);
+			ui->label_compression_by_packet->setEnabled(false);
 			ui->pushButtonConnect->setIcon(QIcon(":/images/stop.png"));
 			ui->pushButtonConnect->setText(tr("Stop connecting"));
 		}
@@ -648,6 +649,10 @@ void MainWindow::updateConnectButton()
 			}
 			ui->compressedStream->setEnabled(true);
 			ui->compressionType->setEnabled(true);
+			ui->compressionBufferSize->setEnabled(true);
+			ui->label_compressio_buffer->setEnabled(true);
+			ui->compressionByPacket->setEnabled(true);
+			ui->label_compression_by_packet->setEnabled(true);
 			on_compressionType_currentIndexChanged(0);
 			ui->pushButtonConnect->setIcon(QIcon(":/images/connect.png"));
 			ui->pushButtonConnect->setText(tr("Connect"));

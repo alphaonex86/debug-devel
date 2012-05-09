@@ -6,7 +6,7 @@
 # Note : See doc for copyright and developer
 # Target : Class for do testing of communication
 QT += network
-TARGET = debug-devel
+TARGET = debug-devel-client
 TEMPLATE = app
 SOURCES += main.cpp \
     mainwindow.cpp \

@@ -100,6 +100,9 @@
       </item>
       <item>
        <widget class="QComboBox" name="compressionType">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
         <item>
          <property name="text">
           <string>Lz4hc</string>
@@ -1235,12 +1238,12 @@ background-attachment	: fixed;
    <slot>clear()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>393</x>
-     <y>48</y>
+     <x>410</x>
+     <y>131</y>
     </hint>
     <hint type="destinationlabel">
-     <x>262</x>
-     <y>90</y>
+     <x>411</x>
+     <y>212</y>
     </hint>
    </hints>
   </connection>
@@ -1251,12 +1254,12 @@ background-attachment	: fixed;
    <slot>click()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>58</x>
-     <y>242</y>
+     <x>69</x>
+     <y>339</y>
     </hint>
     <hint type="destinationlabel">
-     <x>166</x>
-     <y>326</y>
+     <x>257</x>
+     <y>446</y>
     </hint>
    </hints>
   </connection>
@@ -1267,12 +1270,12 @@ background-attachment	: fixed;
    <slot>click()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>151</x>
-     <y>293</y>
+     <x>181</x>
+     <y>411</y>
     </hint>
     <hint type="destinationlabel">
-     <x>207</x>
-     <y>324</y>
+     <x>257</x>
+     <y>446</y>
     </hint>
    </hints>
   </connection>
@@ -1283,12 +1286,28 @@ background-attachment	: fixed;
    <slot>clear()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>180</x>
-     <y>38</y>
+     <x>203</x>
+     <y>131</y>
     </hint>
     <hint type="destinationlabel">
-     <x>113</x>
-     <y>63</y>
+     <x>117</x>
+     <y>200</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>compressedStream</sender>
+   <signal>clicked(bool)</signal>
+   <receiver>compressionType</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>133</x>
+     <y>45</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>240</x>
+     <y>47</y>
     </hint>
    </hints>
   </connection>
