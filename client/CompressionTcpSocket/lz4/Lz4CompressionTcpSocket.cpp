@@ -1,7 +1,7 @@
 #include "Lz4CompressionTcpSocket.h"
 
 Lz4CompressionTcpSocket::Lz4CompressionTcpSocket()
-	: HeaderCompressedSizeCompressionTcpSocket()
+	: HeaderUncompressedSizeCompressionTcpSocket()
 {
 }
 
@@ -14,9 +14,9 @@ QByteArray Lz4CompressionTcpSocket::compressDataWithoutHeader(const QByteArray r
 	return compressedData;
 }
 
-int Lz4CompressionTcpSocket::decompressDataWithoutHeader(const QByteArray &source,QByteArray *destination,const int &maxOutputSize)
+int Lz4CompressionTcpSocket::decompressDataWithoutHeader(const QByteArray &source,QByteArray *destination)
 {
-	return QLZ4_uncompress_unknownOutputSize(source,destination,maxOutputSize);
+	return LZ4_uncompress_unknownOutputSize(source.constData(),destination->data(),source.size(),destination->size());
 }
 
 int Lz4CompressionTcpSocket::maxCompressedSize(const int &maxSize)

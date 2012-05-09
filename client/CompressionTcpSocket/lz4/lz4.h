@@ -39,6 +39,7 @@ extern "C" {
 //****************************
 
 int LZ4_compress   (const char* source, char* dest, int isize);
+int LZ4_uncompress (const char* source, char* dest, int osize);
 
 /*
 LZ4_compress() :
@@ -48,6 +49,12 @@ LZ4_compress() :
 		destination buffer must be sized to handle worst cases situations (input data not compressible)
 		worst case size evaluation is provided by function LZ4_compressBound()
 
+LZ4_uncompress() :
+	osize  : is the output size, therefore the original size
+	return : the number of bytes read in the source buffer
+			 If the source stream is malformed, the function will stop decoding and return a negative result, indicating the byte position of the faulty instruction
+			 This function never writes beyond dest + osize, and is therefore protected against malicious data packets
+	note : destination buffer must be already allocated
 */
 
 
@@ -65,6 +72,19 @@ LZ4_compressBound() :
 	isize  : is the input size
 	return : maximum output size in a "worst case" scenario
 	note : this function is limited by "int" range (2^31-1)
+*/
+
+
+int LZ4_uncompress_unknownOutputSize(const char* source, char* dest, int isize, int maxOutputSize);
+
+/*
+LZ4_uncompress_unknownOutputSize() :
+	isize  : is the input size, therefore the compressed size
+	maxOutputSize : is the size of the destination buffer (which must be already allocated)
+	return : the number of bytes decoded in the destination buffer (necessarily <= maxOutputSize)
+			 If the source stream is malformed, the function will stop decoding and return a negative result, indicating the byte position of the faulty instruction
+			 This function never writes beyond dest + maxOutputSize, and is therefore protected against malicious data packets
+	note   : This version is slightly slower than LZ4_uncompress()
 */
 
 

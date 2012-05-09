@@ -6,9 +6,9 @@ ZlibAbstractCompressionTcpSocket::ZlibAbstractCompressionTcpSocket(int bufferSiz
 	this->bufferSize=correctTheBufferSize(bufferSize);
 	this->compression=correctTheCompression(compression);
 	decompressor=NULL;
-	buffer_decompression=NULL;
+	buffer_decompression=new QBuffer(&buffer_decompression_out);
 	compressor=NULL;
-	buffer_compression=NULL;
+	buffer_compression=new QBuffer(&buffer_compression_out);
 }
 
 ZlibAbstractCompressionTcpSocket::~ZlibAbstractCompressionTcpSocket()
@@ -17,23 +17,31 @@ ZlibAbstractCompressionTcpSocket::~ZlibAbstractCompressionTcpSocket()
 	delete compressor;
 }
 
-QByteArray ZlibAbstractCompressionTcpSocket::compressData(const QByteArray rawData)
+QByteArray ZlibAbstractCompressionTcpSocket::compressData(const QByteArray &rawData)
 {
+	m_errorString="";
 	QByteArray compressedData;
 	compressor->write(rawData);
-	compressor->flush();//add big overhead, edited mode to Z_PARTIAL_FLUSH
+	//compressor->flush();//add big overhead, edited mode to Z_PARTIAL_FLUSH
+	compressor->close();
+	compressor->open(QIODevice::WriteOnly);
 	compressedData=buffer_compression_out;
 	buffer_compression->seek(0);
 	buffer_compression_out.resize(0);
 	return compressedData;
 }
 
-QByteArray ZlibAbstractCompressionTcpSocket::decompressData(const QByteArray compressedData,const int &maxSize)
+QByteArray ZlibAbstractCompressionTcpSocket::decompressData(const QByteArray &compressedData,const int &maxSize)
 {
+	m_errorString="";
 	Q_UNUSED(maxSize)
-	buffer_decompression->seek(0);
+	buffer_decompression_out.resize(buffer_decompression_out.size()+maxSize);
+	//buffer_decompression->seek(0);
 	buffer_decompression_out=compressedData;
 	QByteArray rawData=decompressor->readAll();
+	decompressor->close();
+	decompressor->open(QIODevice::ReadOnly);
+	return rawData;
 	if(rawData.size()>0)
 	{
 		buffer_decompression->seek(0);
@@ -42,7 +50,7 @@ QByteArray ZlibAbstractCompressionTcpSocket::decompressData(const QByteArray com
 	}
 	else
 	{
-		m_errorString=QString("Error at decompressing: %1").arg(decompressor->errorString());
+		m_errorString=decompressor->errorString();
 		return QByteArray();
 	}
 }

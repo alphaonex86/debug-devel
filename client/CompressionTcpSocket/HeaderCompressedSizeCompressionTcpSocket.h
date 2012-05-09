@@ -7,8 +7,8 @@ class HeaderCompressedSizeCompressionTcpSocket : public CompressionTcpSocketInte
 {
 public:
 	HeaderCompressedSizeCompressionTcpSocket();
-	virtual QByteArray compressData(const QByteArray rawData);
-	virtual QByteArray decompressData(const QByteArray compressedData,const int &maxSize);
+	virtual QByteArray compressData(const QByteArray &rawData);
+	virtual QByteArray decompressData(const QByteArray &compressedData,const int &maxSize);
 protected:
 	virtual QByteArray compressDataWithoutHeader(const QByteArray rawData) = 0;
 	virtual int decompressDataWithoutHeader(const QByteArray &source,QByteArray *destination,const int &maxOutputSize) = 0;

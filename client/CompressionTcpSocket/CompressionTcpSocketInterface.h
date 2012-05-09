@@ -9,8 +9,8 @@ class CompressionTcpSocketInterface
 {
 public:
 	CompressionTcpSocketInterface();
-	virtual QByteArray compressData(const QByteArray rawData) = 0;
-	virtual QByteArray decompressData(const QByteArray compressedData,const int &maxSize=16777216) = 0;
+	virtual QByteArray compressData(const QByteArray &rawData) = 0;
+	virtual QByteArray decompressData(const QByteArray &compressedData,const int &maxSize=16777216) = 0;
 	bool isInError();
 	QString errorString();
 protected:

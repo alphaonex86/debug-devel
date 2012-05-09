@@ -5,12 +5,12 @@ NoCompressionTcpSocket::NoCompressionTcpSocket()
 {
 }
 
-QByteArray NoCompressionTcpSocket::compressData(const QByteArray rawData)
+QByteArray NoCompressionTcpSocket::compressData(const QByteArray &rawData)
 {
 	return rawData;
 }
 
-QByteArray NoCompressionTcpSocket::decompressData(const QByteArray compressedData)
+QByteArray NoCompressionTcpSocket::decompressData(const QByteArray &compressedData)
 {
 	return compressedData;
 }

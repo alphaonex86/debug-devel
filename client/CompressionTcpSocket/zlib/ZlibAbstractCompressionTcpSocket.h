@@ -12,8 +12,8 @@ public:
 	ZlibAbstractCompressionTcpSocket(int bufferSize,int compression);
 	~ZlibAbstractCompressionTcpSocket();
 protected:
-	virtual QByteArray compressData(const QByteArray rawData);
-	virtual QByteArray decompressData(const QByteArray compressedData,const int &maxSize);
+	virtual QByteArray compressData(const QByteArray &rawData);
+	virtual QByteArray decompressData(const QByteArray &compressedData,const int &maxSize);
 	virtual void abstractBlockingMethod() = 0;
 	QtIOCompressor* decompressor;
 	QBuffer* buffer_decompression;

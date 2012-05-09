@@ -8,8 +8,8 @@ class NoCompressionTcpSocket : public CompressionTcpSocketInterface
 public:
 	NoCompressionTcpSocket();
 private:
-	QByteArray compressData(const QByteArray rawData);
-	QByteArray decompressData(const QByteArray compressedData);
+	QByteArray compressData(const QByteArray &rawData);
+	QByteArray decompressData(const QByteArray &compressedData);
 };
 
 #endif // NOCOMPRESSIONTCPSOCKET_H

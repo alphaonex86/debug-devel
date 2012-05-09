@@ -5,11 +5,13 @@ GzipCompressionTcpSocket::GzipCompressionTcpSocket(int bufferSize,int compressio
 {
 	compressor=new QtIOCompressor(buffer_compression,this->compression,this->bufferSize);
 	compressor->setStreamFormat(QtIOCompressor::GzipFormat);
-	compressor->open(QIODevice::WriteOnly);
+	if(!compressor->open(QIODevice::WriteOnly))
+		qDebug() << "Unable to open the compressor";
 
 	decompressor=new QtIOCompressor(buffer_decompression);
 	decompressor->setStreamFormat(QtIOCompressor::GzipFormat);
-	decompressor->open(QIODevice::ReadOnly);
+	if(!decompressor->open(QIODevice::ReadOnly))
+		qDebug() << "Unable to open the decompressor";
 }
 
 void GzipCompressionTcpSocket::abstractBlockingMethod()

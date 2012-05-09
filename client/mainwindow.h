@@ -119,6 +119,7 @@ private slots:
 	void loadTheFileTx();
 	//save the Rx file
 	void saveTheFileRx();
+	void on_compressionType_currentIndexChanged(int index);
 };
 
 #endif // MAINWINDOW_H

@@ -5,8 +5,9 @@ HeaderCompressedSizeCompressionTcpSocket::HeaderCompressedSizeCompressionTcpSock
 {
 }
 
-QByteArray HeaderCompressedSizeCompressionTcpSocket::compressData(const QByteArray rawData)
+QByteArray HeaderCompressedSizeCompressionTcpSocket::compressData(const QByteArray &rawData)
 {
+	m_errorString="";
 	QByteArray compressedData=compressDataWithoutHeader(rawData);
 	QByteArray outputData;
 	QDataStream out(&outputData, QIODevice::WriteOnly);
@@ -15,8 +16,9 @@ QByteArray HeaderCompressedSizeCompressionTcpSocket::compressData(const QByteArr
 	return outputData+compressedData;
 }
 
-QByteArray HeaderCompressedSizeCompressionTcpSocket::decompressData(const QByteArray compressedData,const int &maxSize)
+QByteArray HeaderCompressedSizeCompressionTcpSocket::decompressData(const QByteArray &compressedData,const int &maxSize)
 {
+	m_errorString="";
 	QByteArray rawData,chunk,tempReturnedData;
 	int returnSize,compressedDataSize;
 	int successLoop;

@@ -459,7 +459,7 @@ void QtIOCompressor::flush()
     if (isOpen() == false || openMode() & ReadOnly)
         return;
 
-    d->flushZlib(Z_PARTIAL_FLUSH);
+    d->flushZlib(Z_PARTIAL_FLUSH);//Z_FULL_FLUSH
 }
 
 /*!
@@ -472,6 +472,7 @@ void QtIOCompressor::flush()
 */
 qint64 QtIOCompressor::bytesAvailable() const
 {
+	qDebug() << "bytesAvailable";
     Q_D(const QtIOCompressor);
     if ((openMode() & ReadOnly) == false)
         return 0;
@@ -506,13 +507,20 @@ qint64 QtIOCompressor::bytesAvailable() const
 */
 qint64 QtIOCompressor::readData(char *data, qint64 maxSize)
 {
+	qDebug() << "readData";
     Q_D(QtIOCompressor);
 
     if (d->state == QtIOCompressorPrivate::EndOfStream)
+    {
+	    qDebug() << "EndOfStream";
         return 0;
+    }
 
     if (d->state == QtIOCompressorPrivate::Error)
+    {
+	    qDebug() << "Error";
         return -1;
+    }
 
     // We are ging to try to fill the data buffer
     d->zlibStream.next_out = reinterpret_cast<ZlibByte *>(data);
@@ -552,7 +560,8 @@ qint64 QtIOCompressor::readData(char *data, qint64 maxSize)
                 d->setZlibError(QT_TRANSLATE_NOOP("QtIOCompressor", "Internal zlib error when decompressing: "), status);
                 return -1;
             case Z_BUF_ERROR: // No more input and zlib can not privide more output - Not an error, we can try to read again when we have more input.
-                return 0;
+		qDebug() << QString("Z_BUF_ERROR: %1").arg(maxSize - d->zlibStream.avail_out);
+		return 0;
             break;
         }
     // Loop util data buffer is full or we reach the end of the input stream.

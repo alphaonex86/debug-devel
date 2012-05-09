@@ -100,6 +100,8 @@ MainWindow::MainWindow(QWidget *parent) :
 	connect(ui->plainTextEditTx,SIGNAL(textChanged()),this,SLOT(UpdateTheTxField()));
 	connect(ui->loadFileTx,SIGNAL(clicked()),this,SLOT(loadTheFileTx()));
 	connect(ui->saveFileRx,SIGNAL(clicked()),this,SLOT(saveTheFileRx()));
+
+	on_compressionType_currentIndexChanged(0);
 }
 
 /// \brief try disconnect the current connexion
@@ -602,24 +604,27 @@ void MainWindow::updateConnectButton()
 		switch(ui->compressionType->currentIndex())
 		{
 		case 2:
-			compression=new ZlibCompressionTcpSocket(ui->chunkSize->value(),9);
+			compression=new ZlibCompressionTcpSocket(ui->compressionBufferSize->value(),9);
 			break;
 		case 3:
-			compression=new GzipCompressionTcpSocket(ui->chunkSize->value(),9);
+			compression=new GzipCompressionTcpSocket(ui->compressionBufferSize->value(),9);
 			break;
 		case 0:
-			compression=new Lz4HcCompressionTcpSocket(ui->chunkSize->value());
+			compression=new Lz4HcCompressionTcpSocket();
 			break;
 		case 1:
 		default:
-			compression=new Lz4CompressionTcpSocket(ui->chunkSize->value());
+			compression=new Lz4CompressionTcpSocket();
 		break;
 		}
 		ui->pushButtonConnect->setIcon(QIcon(":/images/network-connect.png"));
 		ui->pushButtonConnect->setText(tr("Disconnect"));
 		ui->compressedStream->setEnabled(false);
 		ui->compressionType->setEnabled(false);
-		ui->chunkSize->setEnabled(false);
+		ui->compressionBufferSize->setHidden(true);
+		ui->label_compressio_buffer->setHidden(true);
+		ui->compressionByPacket->setHidden(true);
+		ui->label_compression_by_packet->setHidden(true);
 	}
 	else
 	{
@@ -627,7 +632,10 @@ void MainWindow::updateConnectButton()
 		{
 			ui->compressedStream->setEnabled(false);
 			ui->compressionType->setEnabled(false);
-			ui->chunkSize->setEnabled(false);
+			ui->compressionBufferSize->setHidden(true);
+			ui->label_compressio_buffer->setHidden(true);
+			ui->compressionByPacket->setHidden(true);
+			ui->label_compression_by_packet->setHidden(true);
 			ui->pushButtonConnect->setIcon(QIcon(":/images/stop.png"));
 			ui->pushButtonConnect->setText(tr("Stop connecting"));
 		}
@@ -640,7 +648,7 @@ void MainWindow::updateConnectButton()
 			}
 			ui->compressedStream->setEnabled(true);
 			ui->compressionType->setEnabled(true);
-			ui->chunkSize->setEnabled(true);
+			on_compressionType_currentIndexChanged(0);
 			ui->pushButtonConnect->setIcon(QIcon(":/images/connect.png"));
 			ui->pushButtonConnect->setText(tr("Connect"));
 		}
@@ -824,12 +832,35 @@ QByteArray MainWindow::compress(QByteArray raw_data)
 
 QByteArray MainWindow::decompress(QByteArray compressed_data)
 {
-	QByteArray raw_data=compression->decompressData(raw_data);
+	QByteArray raw_data=compression->decompressData(compressed_data);
 	if(compression->isInError())
 	{
-		ui->statusBarApp->showMessage("Error at the decompression",10000);
+		ui->statusBarApp->showMessage(tr("Error at the decompression: %1").arg(compression->errorString()),10000);
 		return compressed_data;
 	}
 	else
 		return raw_data;
+}
+
+void MainWindow::on_compressionType_currentIndexChanged(int index)
+{
+	Q_UNUSED(index);
+	switch(ui->compressionType->currentIndex())
+	{
+		case 2:
+		case 3:
+			ui->compressionBufferSize->setHidden(false);
+			ui->label_compressio_buffer->setHidden(false);
+			ui->compressionByPacket->setHidden(false);
+			ui->label_compression_by_packet->setHidden(false);
+		break;
+		case 0:
+		case 1:
+		default:
+			ui->compressionBufferSize->setHidden(true);
+			ui->label_compressio_buffer->setHidden(true);
+			ui->compressionByPacket->setHidden(true);
+			ui->label_compression_by_packet->setHidden(true);
+		break;
+	}
 }
