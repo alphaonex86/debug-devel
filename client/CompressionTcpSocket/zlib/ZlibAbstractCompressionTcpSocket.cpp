@@ -1,6 +1,6 @@
 #include "ZlibAbstractCompressionTcpSocket.h"
 
-ZlibAbstractCompressionTcpSocket::ZlibAbstractCompressionTcpSocket(int bufferSize,int compression)
+ZlibAbstractCompressionTcpSocket::ZlibAbstractCompressionTcpSocket(int bufferSize,int compression,bool byPacket)
 	: CompressionTcpSocketInterface()
 {
 	this->bufferSize=correctTheBufferSize(bufferSize);
@@ -9,6 +9,7 @@ ZlibAbstractCompressionTcpSocket::ZlibAbstractCompressionTcpSocket(int bufferSiz
 	buffer_decompression=new QBuffer(&buffer_decompression_out);
 	compressor=NULL;
 	buffer_compression=new QBuffer(&buffer_compression_out);
+	this->byPacket=byPacket;
 }
 
 ZlibAbstractCompressionTcpSocket::~ZlibAbstractCompressionTcpSocket()
@@ -22,9 +23,13 @@ QByteArray ZlibAbstractCompressionTcpSocket::compressData(const QByteArray &rawD
 	m_errorString="";
 	QByteArray compressedData;
 	compressor->write(rawData);
-	//compressor->flush();//add big overhead, edited mode to Z_PARTIAL_FLUSH
-	compressor->close();
-	compressor->open(QIODevice::WriteOnly);
+	if(!byPacket)
+		compressor->flush();//add big overhead, edited mode
+	else
+	{
+		compressor->close();
+		compressor->open(QIODevice::WriteOnly);
+	}
 	compressedData=buffer_compression_out;
 	buffer_compression->seek(0);
 	buffer_compression_out.resize(0);
@@ -39,8 +44,11 @@ QByteArray ZlibAbstractCompressionTcpSocket::decompressData(const QByteArray &co
 	//buffer_decompression->seek(0);
 	buffer_decompression_out=compressedData;
 	QByteArray rawData=decompressor->readAll();
-	decompressor->close();
-	decompressor->open(QIODevice::ReadOnly);
+	if(byPacket)
+	{
+		decompressor->close();
+		decompressor->open(QIODevice::ReadOnly);
+	}
 	return rawData;
 	if(rawData.size()>0)
 	{

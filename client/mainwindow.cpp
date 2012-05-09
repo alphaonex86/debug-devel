@@ -604,10 +604,10 @@ void MainWindow::updateConnectButton()
 		switch(ui->compressionType->currentIndex())
 		{
 		case 2:
-			compression=new ZlibCompressionTcpSocket(ui->compressionBufferSize->value(),9);
+			compression=new ZlibCompressionTcpSocket(ui->compressionBufferSize->value(),9,ui->compressionByPacket->isChecked());
 			break;
 		case 3:
-			compression=new GzipCompressionTcpSocket(ui->compressionBufferSize->value(),9);
+			compression=new GzipCompressionTcpSocket(ui->compressionBufferSize->value(),9,ui->compressionByPacket->isChecked());
 			break;
 		case 0:
 			compression=new Lz4HcCompressionTcpSocket();

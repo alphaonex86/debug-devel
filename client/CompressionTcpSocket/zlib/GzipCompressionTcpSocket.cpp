@@ -1,7 +1,7 @@
 #include "GzipCompressionTcpSocket.h"
 
-GzipCompressionTcpSocket::GzipCompressionTcpSocket(int bufferSize,int compression)
-	: ZlibAbstractCompressionTcpSocket(bufferSize,compression)
+GzipCompressionTcpSocket::GzipCompressionTcpSocket(int bufferSize,int compression,bool byPacket)
+	: ZlibAbstractCompressionTcpSocket(bufferSize,compression,byPacket)
 {
 	compressor=new QtIOCompressor(buffer_compression,this->compression,this->bufferSize);
 	compressor->setStreamFormat(QtIOCompressor::GzipFormat);
