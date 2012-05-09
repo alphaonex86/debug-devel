@@ -9,9 +9,9 @@ The compression on the QTcpSocket is compatible with QSslSocket.
 The generic interface is used, multiple algorithm like zlib, gzip, lz4, lz4hc is implemented. Can be extended.
 The compression can be hot added/removed, but is not used with this application.
 The zlib/gzip can be compressed only as packet due to qtiocompressor bug (I think).
-lz4/lz4hc have only compression by packet.
+lz4/lz4hc have only compression by message (all the data sended to the compressor).
 
 ================= LZ4 =================
 You can see more details about lz4 class on:
 http://pokecraft.first-world.info/wiki/Lz4CompressionTcpSocket_for_Qt
-For this, the size of compressed packet is send on usigned int before the compressed data.
+For this, the size of uncompressed packet is send on usigned int before the compressed data.
