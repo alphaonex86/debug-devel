@@ -23,6 +23,7 @@ MainWindow::MainWindow(QWidget *parent)
 	ui->comboBoxMode->setItemText(0,"Tcp socket (QTcpServer)");
 	ui->comboBoxMode->setItemText(1,COMBOBOXTEXTLOCALSOCK);
 	updateMode();
+	on_compressionType_currentIndexChanged(0);
 }
 
 int MainWindow::indexOfSelection()
@@ -60,36 +61,23 @@ void MainWindow::newClient()
 		ui->listWidgetClient->addItem(TempItem);
 
 		//compression part
-		tcpSocket.last()->buffer_compression=new QBuffer(&tcpSocket.last()->buffer_compression_out);
-		tcpSocket.last()->compressor=NULL;
-		tcpSocket.last()->buffer_decompression=new QBuffer(&tcpSocket.last()->buffer_decompression_out);
-		tcpSocket.last()->decompressor=NULL;
+		tcpSocket.last()->compression=NULL;
 		switch(ui->compressionType->currentIndex())
 		{
 		case 2:
-			tcpSocket.last()->compressor=new QtIOCompressor(tcpSocket.last()->buffer_compression,9,ui->chunkSize->value());
-			tcpSocket.last()->compressor->setStreamFormat(QtIOCompressor::ZlibFormat);
-			tcpSocket.last()->compressor->open(QIODevice::WriteOnly);
-
-			tcpSocket.last()->decompressor=new QtIOCompressor(tcpSocket.last()->buffer_decompression);
-			tcpSocket.last()->decompressor->setStreamFormat(QtIOCompressor::ZlibFormat);
-			tcpSocket.last()->decompressor->open(QIODevice::ReadOnly);
+			tcpSocket.last()->compression=new ZlibCompressionTcpSocket(ui->compressionBufferSize->value(),9,ui->compressionByPacket->isChecked());
 			break;
 		case 3:
-			tcpSocket.last()->compressor=new QtIOCompressor(tcpSocket.last()->buffer_compression,9,ui->chunkSize->value());
-			tcpSocket.last()->compressor->setStreamFormat(QtIOCompressor::GzipFormat);
-			tcpSocket.last()->compressor->open(QIODevice::WriteOnly);
-
-			tcpSocket.last()->decompressor=new QtIOCompressor(tcpSocket.last()->buffer_decompression);
-			tcpSocket.last()->decompressor->setStreamFormat(QtIOCompressor::GzipFormat);
-			tcpSocket.last()->decompressor->open(QIODevice::ReadOnly);
+			tcpSocket.last()->compression=new GzipCompressionTcpSocket(ui->compressionBufferSize->value(),9,ui->compressionByPacket->isChecked());
 			break;
 		case 0:
+			tcpSocket.last()->compression=new Lz4HcCompressionTcpSocket();
+			break;
 		case 1:
 		default:
+			tcpSocket.last()->compression=new Lz4CompressionTcpSocket();
 		break;
 		}
-
 	}
 	if(connectedMode==COMBOBOXTEXTLOCALSOCK)
 	{
@@ -106,33 +94,21 @@ void MainWindow::newClient()
 		ui->listWidgetClient->addItem(localSocket.last()->ItemInList);
 
 		//compression part
-		localSocket.last()->buffer_compression=new QBuffer(&tcpSocket.last()->buffer_compression_out);
-		localSocket.last()->compressor=NULL;
-		localSocket.last()->buffer_decompression=new QBuffer(&tcpSocket.last()->buffer_decompression_out);
-		localSocket.last()->decompressor=NULL;
+		localSocket.last()->compression=NULL;
 		switch(ui->compressionType->currentIndex())
 		{
 		case 2:
-			localSocket.last()->compressor=new QtIOCompressor(tcpSocket.last()->buffer_compression,9,ui->chunkSize->value());
-			localSocket.last()->compressor->setStreamFormat(QtIOCompressor::ZlibFormat);
-			localSocket.last()->compressor->open(QIODevice::WriteOnly);
-
-			localSocket.last()->decompressor=new QtIOCompressor(tcpSocket.last()->buffer_decompression);
-			localSocket.last()->decompressor->setStreamFormat(QtIOCompressor::ZlibFormat);
-			localSocket.last()->decompressor->open(QIODevice::ReadOnly);
+			localSocket.last()->compression=new ZlibCompressionTcpSocket(ui->compressionBufferSize->value(),9,ui->compressionByPacket->isChecked());
 			break;
 		case 3:
-			localSocket.last()->compressor=new QtIOCompressor(tcpSocket.last()->buffer_compression,9,ui->chunkSize->value());
-			localSocket.last()->compressor->setStreamFormat(QtIOCompressor::GzipFormat);
-			localSocket.last()->compressor->open(QIODevice::WriteOnly);
-
-			localSocket.last()->decompressor=new QtIOCompressor(tcpSocket.last()->buffer_decompression);
-			localSocket.last()->decompressor->setStreamFormat(QtIOCompressor::GzipFormat);
-			localSocket.last()->decompressor->open(QIODevice::ReadOnly);
+			localSocket.last()->compression=new GzipCompressionTcpSocket(ui->compressionBufferSize->value(),9,ui->compressionByPacket->isChecked());
 			break;
 		case 0:
+			localSocket.last()->compression=new Lz4HcCompressionTcpSocket();
+			break;
 		case 1:
 		default:
+			localSocket.last()->compression=new Lz4CompressionTcpSocket();
 		break;
 		}
 	}
@@ -163,20 +139,13 @@ void MainWindow::newData()
 		if(ui->comboBoxModeAppend->currentText()=="Update")
 			tcpSocket[index]->IncomingData.clear();
 
-		QByteArray chunk;
-		do
-		{
-			if(block.size()<=ui->chunkSize->value())
-				chunk=block;
-			else
-				chunk=block.mid(0,ui->chunkSize->value());
-			block.remove(0,chunk.size());
-			if(ui->compressedStream->isChecked())
-				chunk=decompress(chunk,tcpSocket[index]->buffer_decompression,&tcpSocket[index]->buffer_decompression_out,tcpSocket[index]->compressor);
-			//load in hexa if needed and append or update the text
-			tcpSocket[index]->IncomingData.append(chunk);
-		} while(block.size()>0);
-
+		QByteArray raw_data;
+		if(ui->compressedStream->isChecked())
+			raw_data=tcpSocket[index]->compression->decompressData(block);
+		else
+			raw_data=block;
+		//load in hexa if needed and append or update the text
+		tcpSocket[index]->IncomingData.append(raw_data);
 
 		updateCurrentData();
 	}
@@ -198,21 +167,13 @@ void MainWindow::newData()
 		if(ui->comboBoxModeAppend->currentText()=="Update")
 			localSocket[index]->IncomingData.clear();
 
-		QByteArray chunk;
-		do
-		{
-			if(block.size()<=ui->chunkSize->value())
-				chunk=block;
-			else
-				chunk=block.mid(0,ui->chunkSize->value());
-			block.remove(0,chunk.size());
-			if(ui->compressedStream->isChecked())
-				chunk=decompress(chunk,localSocket[index]->buffer_decompression,&localSocket[index]->buffer_decompression_out,localSocket[index]->compressor);
-			//load in hexa if needed and append or update the text
-			localSocket[index]->IncomingData.append(chunk);
-		} while(block.size()>0);
+		QByteArray raw_data;
+		if(ui->compressedStream->isChecked())
+			raw_data=tcpSocket[index]->compression->decompressData(block);
+		else
+			raw_data=block;
 
-		localSocket[index]->IncomingData.append(block);
+		localSocket[index]->IncomingData.append(raw_data);
 		updateCurrentData();
 	}
 }
@@ -270,17 +231,15 @@ void MainWindow::clientLeave()
 			socket->deleteLater();
 
 			//compression
-			if(tcpSocket[index]->compressor!=NULL)
+			if(tcpSocket[index]->compression!=NULL)
 			{
-				tcpSocket[index]->compressor->close();
-				delete tcpSocket[index]->compressor;
-				tcpSocket[index]->compressor=NULL;
+				delete tcpSocket[index]->compression;
+				tcpSocket[index]->compression=NULL;
 			}
-			if(tcpSocket[index]->decompressor!=NULL)
+			if(tcpSocket[index]->compression!=NULL)
 			{
-				tcpSocket[index]->decompressor->close();
-				delete tcpSocket[index]->decompressor;
-				tcpSocket[index]->decompressor=NULL;
+				delete tcpSocket[index]->compression;
+				tcpSocket[index]->compression=NULL;
 			}
 		}
 	}
@@ -308,17 +267,15 @@ void MainWindow::clientLeave()
 		}
 
 		//compression
-		if(localSocket[index]->compressor!=NULL)
+		if(localSocket[index]->compression!=NULL)
 		{
-			localSocket[index]->compressor->close();
-			delete localSocket[index]->compressor;
-			localSocket[index]->compressor=NULL;
+			delete localSocket[index]->compression;
+			localSocket[index]->compression=NULL;
 		}
-		if(localSocket[index]->decompressor!=NULL)
+		if(localSocket[index]->compression!=NULL)
 		{
-			localSocket[index]->decompressor->close();
-			delete localSocket[index]->decompressor;
-			localSocket[index]->decompressor=NULL;
+			delete localSocket[index]->compression;
+			localSocket[index]->compression=NULL;
 		}
 	}
 }
@@ -499,11 +456,11 @@ void MainWindow::on_pushButtonConnect_clicked()
 \return Return true if disconnect */
 bool MainWindow::Disconnect()
 {
-	ui->compressedStream->setEnabled(true);
-	ui->compressionType->setEnabled(true);
-	ui->chunkSize->setEnabled(true);
 	if(isConnected)
 	{
+		ui->compressedStream->setEnabled(true);
+		ui->compressionOptions->setEnabled(true);
+		on_compressionType_currentIndexChanged(0);
 		for (int i = 0; i < tcpSocket.size(); ++i) {
 			if(tcpSocket.at(i)->isConnected)
 				tcpSocket.at(i)->tcpSocket->disconnectFromHost();
@@ -550,9 +507,9 @@ bool MainWindow::Connect()
 			ui->statusBarApp->showMessage("Internal error",10000);
 		if(isConnected)
 		{
-			ui->compressedStream->setEnabled(false);
+			ui->compressionOptions->setEnabled(false);
 			ui->compressionType->setEnabled(false);
-			ui->chunkSize->setEnabled(false);
+			ui->compressedStream->setEnabled(false);
 			ui->statusBarApp->showMessage("Server open and listen connection",10000);
 			return true;
 		}
@@ -710,61 +667,54 @@ bool MainWindow::sendNewData()
 		ui->statusBarApp->showMessage(tr("No text detected!"));
 		return false;
 	}
-	QByteArray chunk;
-	do
+
+	QByteArray compressedData=block;
+	int byteWriten=-2;
+	QString ErrorQString;
+	if(connectedMode=="Tcp socket (QTcpServer)") // if connection is on tcp socket mode
 	{
-		if(block.size()<=ui->chunkSize->value())
-			chunk=block;
-		else
-			chunk=block.mid(0,ui->chunkSize->value());
-		block.remove(0,chunk.size());
-		int byteWriten=-2;
-		QString ErrorQString;
-		if(connectedMode=="Tcp socket (QTcpServer)") // if connection is on tcp socket mode
-		{
-			if(tcpSocket.at(indexOfSelection())->tcpSocket==NULL)
-				ErrorQString="Socket drop";
-			else if(tcpSocket.at(indexOfSelection())->tcpSocket->state()!=QTcpSocket::ConnectedState)
-				ErrorQString="Socket not connected";
-			else
-			{
-				if(ui->compressedStream->isChecked())
-					chunk=compress(chunk,tcpSocket.at(indexOfSelection())->buffer_compression,&tcpSocket.at(indexOfSelection())->buffer_compression_out,tcpSocket.at(indexOfSelection())->compressor);
-				byteWriten=tcpSocket.at(indexOfSelection())->tcpSocket->write(chunk);
-				if(byteWriten<=0)
-					ErrorQString=tcpSocket.at(indexOfSelection())->tcpSocket->errorString();
-			}
-		}
-		else if(connectedMode==COMBOBOXTEXTLOCALSOCK) // if connection is on local socket mode
-		{
-			if(localSocket.at(indexOfSelection())->localSocket==NULL)
-				ErrorQString="Socket drop";
-			else if(localSocket.at(indexOfSelection())->localSocket->state()!=QLocalSocket::ConnectedState)
-				ErrorQString="Socket not connected";
-			else
-			{
-				if(ui->compressedStream->isChecked())
-					chunk=compress(chunk,localSocket.at(indexOfSelection())->buffer_compression,&localSocket.at(indexOfSelection())->buffer_compression_out,localSocket.at(indexOfSelection())->compressor);
-				byteWriten=localSocket.at(indexOfSelection())->localSocket->write(chunk);
-				if(byteWriten<=0)
-					ErrorQString=localSocket.at(indexOfSelection())->localSocket->errorString();
-			}
-		}
-		if(byteWriten!=chunk.size()) //check if all the byte have been writen
-		{
-			if(byteWriten==-1)
-				ui->statusBarApp->showMessage(tr("Byte to write: ")+QString::number(chunk.size())+"\n"+tr("Byte realy writen: ")+QString::number(byteWriten)+"\n"+tr("Error message: ")+ErrorQString);
-			else if(byteWriten==0)
-				ui->statusBarApp->showMessage("No byte writen.");
-			else
-				ui->statusBarApp->showMessage(tr("Only ")+QString::number(byteWriten)+tr(" bytes writen: ")+ErrorQString);
-		}
+		if(tcpSocket.at(indexOfSelection())->tcpSocket==NULL)
+			ErrorQString="Socket drop";
+		else if(tcpSocket.at(indexOfSelection())->tcpSocket->state()!=QTcpSocket::ConnectedState)
+			ErrorQString="Socket not connected";
 		else
 		{
-			ui->statusBarApp->showMessage(tr("Bytes send: ")+QString::number(byteWriten));
-			return true;
+			if(ui->compressedStream->isChecked())
+				compressedData=tcpSocket.at(indexOfSelection())->compression->compressData(block);
+			byteWriten=tcpSocket.at(indexOfSelection())->tcpSocket->write(compressedData);
+			if(byteWriten<=0)
+				ErrorQString=tcpSocket.at(indexOfSelection())->tcpSocket->errorString();
 		}
-	} while(block.size()>0);
+	}
+	else if(connectedMode==COMBOBOXTEXTLOCALSOCK) // if connection is on local socket mode
+	{
+		if(localSocket.at(indexOfSelection())->localSocket==NULL)
+			ErrorQString="Socket drop";
+		else if(localSocket.at(indexOfSelection())->localSocket->state()!=QLocalSocket::ConnectedState)
+			ErrorQString="Socket not connected";
+		else
+		{
+			if(ui->compressedStream->isChecked())
+				compressedData=localSocket.at(indexOfSelection())->compression->compressData(block);
+			byteWriten=localSocket.at(indexOfSelection())->localSocket->write(compressedData);
+			if(byteWriten<=0)
+				ErrorQString=localSocket.at(indexOfSelection())->localSocket->errorString();
+		}
+	}
+	if(byteWriten!=compressedData.size()) //check if all the byte have been writen
+	{
+		if(byteWriten==-1)
+			ui->statusBarApp->showMessage(tr("Byte to write: ")+QString::number(compressedData.size())+"\n"+tr("Byte realy writen: ")+QString::number(byteWriten)+"\n"+tr("Error message: ")+ErrorQString);
+		else if(byteWriten==0)
+			ui->statusBarApp->showMessage("No byte writen.");
+		else
+			ui->statusBarApp->showMessage(tr("Only ")+QString::number(byteWriten)+tr(" bytes writen: ")+ErrorQString);
+	}
+	else
+	{
+		ui->statusBarApp->showMessage(tr("Bytes send: ")+QString::number(byteWriten));
+		return true;
+	}
 	return false;
 }
 
@@ -774,249 +724,27 @@ void MainWindow::on_pushButtonSend_clicked()
 		sendNewData();
 }
 
-QByteArray MainWindow::compress(QByteArray raw_data,QBuffer *buffer_compression,QByteArray *buffer_compression_out,QtIOCompressor* compressor)
+void MainWindow::on_compressionType_currentIndexChanged(int index)
 {
-	QByteArray compressed_data;
-	int returnSize;
+	Q_UNUSED(index);
 	switch(ui->compressionType->currentIndex())
 	{
-	case 2:
-	case 3:
-		compressor->write(raw_data);
-		compressor->flush();//add big overhead
-		compressed_data=*buffer_compression_out;
-		buffer_compression->seek(0);
-		buffer_compression_out->resize(0);
-		return compressed_data;
+		case 2:
+		case 3:
+			ui->compressionOptions->setHidden(false);
+			ui->compressionBufferSize->setHidden(false);
+			ui->label_compressio_buffer->setHidden(false);
+			ui->compressionByPacket->setHidden(false);
+			ui->label_compression_by_packet->setHidden(false);
 		break;
-	case 0:
-		compressed_data.resize(LZ4_compressBound(raw_data.size()));
-		returnSize=LZ4_compressHC(raw_data.constData(),compressed_data.data(),raw_data.size());
-		compressed_data.resize(returnSize);
-		return compressed_data;
+		case 0:
+		case 1:
+		default:
+			ui->compressionOptions->setHidden(true);
+			ui->compressionBufferSize->setHidden(true);
+			ui->label_compressio_buffer->setHidden(true);
+			ui->compressionByPacket->setHidden(true);
+			ui->label_compression_by_packet->setHidden(true);
 		break;
-	case 1:
-		compressed_data.resize(LZ4_compressBound(raw_data.size()));
-		returnSize=LZ4_compress(raw_data.constData(),compressed_data.data(),raw_data.size());
-		compressed_data.resize(returnSize);
-		return compressed_data;
-		break;
-	default:
-	break;
 	}
-	return raw_data;
-}
-
-QByteArray MainWindow::decompress(QByteArray compressed_data,QBuffer *buffer_decompression,QByteArray *buffer_decompression_out,QtIOCompressor* decompressor)
-{
-	QByteArray raw_data,chunk_data;
-	int returnSize;
-	int successLoop;
-	switch(ui->compressionType->currentIndex())
-	{
-	case 2:
-	case 3:
-		buffer_decompression->seek(0);
-		*buffer_decompression_out=compressed_data;
-		raw_data=decompressor->readAll();
-		if(raw_data.size()>0)
-		{
-			buffer_decompression->seek(0);
-			buffer_decompression_out->resize(0);
-			ui->statusBarApp->showMessage(tr("Decompressed data: %1").arg(raw_data.size()));
-			return raw_data;
-		}
-		else
-		{
-			ui->statusBarApp->showMessage(tr("Error at decompressing: %1").arg(decompressor->errorString()));
-			return compressed_data;
-		}
-		break;
-	case 0:
-	case 1:
-		chunk_data.resize(ui->chunkSize->value());
-		buffer_decompression_out->append(compressed_data);
-		successLoop=0;
-		do
-		{
-			returnSize=QLZ4_uncompress_unknownOutputSize(buffer_decompression_out,&chunk_data,ui->chunkSize->value());
-			if(buffer_decompression_out->size()>LZ4_compressBound(ui->chunkSize->value()))
-			{
-				ui->statusBarApp->showMessage(tr("Error at decompressing, and max size matched: %1").arg(buffer_decompression_out->size()));
-				return compressed_data;
-			}
-			if(returnSize==0 || returnSize==-2 || returnSize==-4)
-				break;
-			if(returnSize<=0)
-			{
-				if(buffer_decompression_out->size()>ui->chunkSize->value())
-				{
-					ui->statusBarApp->showMessage(tr("Error at decompressing: %1").arg(returnSize));
-					return compressed_data;
-				}
-				else
-					break;
-			}
-			chunk_data.resize(returnSize);
-			raw_data+=chunk_data;
-			successLoop++;
-		} while(returnSize>0 && buffer_decompression_out->size()>0);
-		if(buffer_decompression_out->size()>0)
-			ui->statusBarApp->showMessage(tr("block decompressed: %1, remaining compressed data: %2").arg(successLoop).arg(buffer_decompression_out->size()));
-		else
-			ui->statusBarApp->showMessage(tr("block decompressed: %1").arg(successLoop));
-		return raw_data;
-		break;
-	default:
-	break;
-	}
-	return compressed_data;
-}
-
-//**************************************
-// Constants
-//**************************************
-#define COPYLENGTH 8
-#define ML_BITS 4
-#define ML_MASK ((1U<<ML_BITS)-1)
-#define RUN_BITS (8-ML_BITS)
-#define RUN_MASK ((1U<<RUN_BITS)-1)
-
-//**************************************
-// Basic Types
-//**************************************
-typedef struct _U16_S { quint16 v; } U16_S;
-typedef struct _U32_S { quint32 v; } U32_S;
-typedef struct _U64_S { quint64 v; } U64_S;
-
-#define A64(x) (((U64_S *)(x))->v)
-#define A32(x) (((U32_S *)(x))->v)
-#define A16(x) (((U16_S *)(x))->v)
-
-//**************************************
-// Architecture-specific macros
-//**************************************
-#if LZ4_ARCH64	// 64-bit
-#define STEPSIZE 8
-#define UARCH U64
-#define AARCH A64
-#define LZ4_COPYSTEP(s,d)		A64(d) = A64(s); d+=8; s+=8;
-#define LZ4_COPYPACKET(s,d)		LZ4_COPYSTEP(s,d)
-#define LZ4_SECURECOPY(s,d,e)	if (d<e) LZ4_WILDCOPY(s,d,e)
-#define HTYPE U32
-#define INITBASE(base)			const quint8* const base = ip
-#else		// 32-bit
-#define STEPSIZE 4
-#define UARCH U32
-#define AARCH A32
-#define LZ4_COPYSTEP(s,d)		A32(d) = A32(s); d+=4; s+=4;
-#define LZ4_COPYPACKET(s,d)		LZ4_COPYSTEP(s,d); LZ4_COPYSTEP(s,d);
-#define LZ4_SECURECOPY			LZ4_WILDCOPY
-#define HTYPE const quint8*
-#define INITBASE(base)			const int base = 0
-#endif
-
-//**************************************
-// Macros
-//**************************************
-#define LZ4_WILDCOPY(s,d,e)		do { LZ4_COPYPACKET(s,d) } while (d<e);
-
-#if (defined(LZ4_BIG_ENDIAN) && !defined(BIG_ENDIAN_NATIVE_BUT_INCOMPATIBLE))
-#define LZ4_READ_LITTLEENDIAN_16(d,s,p) { U16 v = A16(p); v = bswap16(v); d = (s) - v; }
-#define LZ4_WRITE_LITTLEENDIAN_16(p,i) { U16 v = (U16)(i); v = bswap16(v); A16(p) = v; p+=2; }
-#else		// Little Endian
-#define LZ4_READ_LITTLEENDIAN_16(d,s,p) { d = (s) - A16(p); }
-#define LZ4_WRITE_LITTLEENDIAN_16(p,v) { A16(p) = v; p+=2; }
-#endif
-
-int QLZ4_uncompress_unknownOutputSize(QByteArray *source,
-				QByteArray *destination,
-				int maxOutputSize)
-{
-	// Local Variables
-	const quint8* ip = (const quint8*) source->data();
-	const quint8* const iend = ip + source->size();
-	const quint8* ref;
-
-	quint8* op = (quint8*) destination->data();
-	quint8* base_op = (quint8*) destination->data();
-	quint8* const oend = op + maxOutputSize;
-	quint8* cpy;
-
-	size_t dec[] ={0, 3, 2, 3, 0, 0, 0, 0};
-
-	quint8 token;
-	int length;
-
-	// Main Loop
-	while (ip<iend)
-	{
-		// get runlength
-		token = *ip++;
-		if ((length=(token>>ML_BITS)) == RUN_MASK) { int s=255; while ((ip<iend) && (s==255)) { s=*ip++; length += s; } }
-
-		// copy literals
-		cpy = op+length;
-		if ((cpy>oend-COPYLENGTH) || (ip+length>iend-COPYLENGTH))
-		{
-			if (cpy > oend)
-				return -1;
-			if (ip+length > iend)
-				return -2;
-			memcpy(op, ip, length);
-			op += length;
-			ip += length;
-			//the remaining copy is of other packet
-			/*if (ip<iend)
-				return -3;*/
-			break;    // Necessarily EOF, due to parsing restrictions
-		}
-		do { LZ4_COPYPACKET(ip,op) } while (op<cpy);
-		ip -= (op-cpy); op = cpy;
-
-		// get offset
-		LZ4_READ_LITTLEENDIAN_16(ref,cpy,ip); ip+=2;
-		if (ref<base_op)
-			return -4;
-
-		// get matchlength
-		if ((length=(token&ML_MASK)) == ML_MASK) { while (ip<iend) { int s = *ip++; length +=s; if (s==255) continue; break; } }
-
-		// copy repeated sequence
-		if(__builtin_expect (((op-ref<STEPSIZE) != 0),0))
-				//(expect(, 0))
-		{
-#if LZ4_ARCH64
-			size_t dec2table[]={0, 0, 0, -1, 0, 1, 2, 3};
-			size_t dec2 = dec2table[op-ref];
-#else
-			const int dec2 = 0;
-#endif
-			*op++ = *ref++;
-			*op++ = *ref++;
-			*op++ = *ref++;
-			*op++ = *ref++;
-			ref -= dec[op-ref];
-			A32(op)=A32(ref); op += STEPSIZE-4;
-			ref -= dec2;
-		} else { LZ4_COPYSTEP(ref,op); }
-		cpy = op + length - (STEPSIZE-4);
-		if (cpy>oend-COPYLENGTH)
-		{
-			if (cpy > oend)
-				return -5;
-			LZ4_SECURECOPY(ref, op, (oend-COPYLENGTH));
-			while(op<cpy) *op++=*ref++;
-			op=cpy;
-			if (op == oend) break;    // Check EOF (should never happen, since last 5 bytes are supposed to be literals)
-			continue;
-		}
-		LZ4_SECURECOPY(ref, op, cpy);
-		op=cpy;		// correction
-	}
-
-	// end of decoding
-	destination->resize((int)(op-base_op));
-	source->remove(0,(int)(ip-(const quint8*)source->data()));
-	return destination->size();
 }

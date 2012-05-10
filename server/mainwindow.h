@@ -12,11 +12,13 @@
 #include <QTcpServer>
 #include <QLocalServer>
 #include <QListWidgetItem>
-#include <zlib.h>
-#include <qtiocompressor.h>
-#include <QBuffer>
-#include "lz4.h"
-#include "lz4hc.h"
+
+#include "CompressionTcpSocket/CompressionTcpSocketInterface.h"
+#include "CompressionTcpSocket/NoCompressionTcpSocket.h"
+#include "CompressionTcpSocket/lz4/Lz4CompressionTcpSocket.h"
+#include "CompressionTcpSocket/lz4/Lz4HcCompressionTcpSocket.h"
+#include "CompressionTcpSocket/zlib/GzipCompressionTcpSocket.h"
+#include "CompressionTcpSocket/zlib/ZlibCompressionTcpSocket.h"
 
 int QLZ4_uncompress_unknownOutputSize(QByteArray *source,QByteArray *destination,int maxOutputSize);
 
@@ -27,12 +29,7 @@ QByteArray		OutgoingData;
 QString			LastEditionMode;
 QListWidgetItem		*ItemInList;
 bool			isConnected;
-QtIOCompressor* decompressor;
-QBuffer* buffer_decompression;
-QByteArray buffer_decompression_out;
-QtIOCompressor* compressor;
-QBuffer* buffer_compression;
-QByteArray buffer_compression_out;
+CompressionTcpSocketInterface * compression;
 } tcpClientInfo;
 
 typedef struct {
@@ -42,12 +39,7 @@ QByteArray		OutgoingData;
 QString			LastEditionMode;
 QListWidgetItem		*ItemInList;
 bool			isConnected;
-QtIOCompressor* decompressor;
-QBuffer* buffer_decompression;
-QByteArray buffer_decompression_out;
-QtIOCompressor* compressor;
-QBuffer* buffer_compression;
-QByteArray buffer_compression_out;
+CompressionTcpSocketInterface * compression;
 } localClientInfo;
 
 namespace Ui
@@ -100,8 +92,7 @@ private slots:
 	void updateCurrentData();
 	bool ModeTxHaveChanged(QString newMode);
 	bool sendNewData();
-	QByteArray decompress(QByteArray compressed_data,QBuffer *buffer_decompression,QByteArray *buffer_decompression_out,QtIOCompressor* decompressor);
-	QByteArray compress(QByteArray raw_data,QBuffer *buffer_compression,QByteArray *buffer_compression_out,QtIOCompressor* compressor);
+	void on_compressionType_currentIndexChanged(int index);
 };
 
 #endif // MAINWINDOW_H
