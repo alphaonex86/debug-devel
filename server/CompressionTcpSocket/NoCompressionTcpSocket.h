@@ -9,7 +9,7 @@ public:
 	NoCompressionTcpSocket();
 private:
 	QByteArray compressData(const QByteArray &rawData);
-	QByteArray decompressData(const QByteArray &compressedData);
+	QByteArray decompressData(const QByteArray &compressedData,const int &maxSize=16777216);
 };
 
 #endif // NOCOMPRESSIONTCPSOCKET_H
