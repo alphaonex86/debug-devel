@@ -75,7 +75,11 @@ LZ4_compressBound() :
 */
 
 
-int LZ4_uncompress_unknownOutputSize(const char* source, char* dest, int isize, int maxOutputSize);
+int LZ4_uncompress_unknownOutputSize(
+		const char* source,
+		char* dest,
+		int *isize,
+		int maxOutputSize);
 
 /*
 LZ4_uncompress_unknownOutputSize() :

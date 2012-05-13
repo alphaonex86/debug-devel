@@ -23,8 +23,8 @@ QByteArray HeaderUncompressedSizeCompressionTcpSocket::compressData(const QByteA
 QByteArray HeaderUncompressedSizeCompressionTcpSocket::decompressData(const QByteArray &compressedData,const int &maxSize)
 {
 	m_errorString="";
-	QByteArray rawData,chunk,tempReturnedData;
-	int returnSize,uncompressedDataSize;
+	QByteArray rawData,tempReturnedData;
+	int uncompressedDataSize;
 	int successLoop;
 	buffer_decompression_out.append(compressedData);
 	if(buffer_decompression_out.size()>(maxSize+sizeof(quint32)))
@@ -33,6 +33,7 @@ QByteArray HeaderUncompressedSizeCompressionTcpSocket::decompressData(const QByt
 		m_errorString="buffer is more than maxSize";
 		return QByteArray();
 	}
+	int input_size;
 	successLoop=0;
 	do
 	{
@@ -44,20 +45,23 @@ QByteArray HeaderUncompressedSizeCompressionTcpSocket::decompressData(const QByt
 		if(tempReturnedData.size()!=uncompressedDataSize)
 			tempReturnedData.resize(uncompressedDataSize);
 
+		qDebug() << QString("buffer_decompression_out.size(): %1").arg(buffer_decompression_out.size());
 		buffer_decompression_out.remove(0,sizeof(quint32));
 
+		input_size=buffer_decompression_out.size();
 		if(uncompressedDataSize>12)
 		{
-			returnSize=decompressDataWithoutHeader(buffer_decompression_out,&tempReturnedData);
-			if(returnSize<=0)
+			if(!decompressDataWithoutHeader(buffer_decompression_out,&tempReturnedData,&input_size,&uncompressedDataSize))
 			{
-				m_errorString=QString("Error at decompressing: %1").arg(returnSize);
+				m_errorString=QString("Error at decompressing: %1").arg(uncompressedDataSize);
 				break;
 			}
+			qDebug() << QString("input_size: %1, uncompressedDataSize: %2").arg(input_size).arg(uncompressedDataSize);
 		}
 		else
 			tempReturnedData=buffer_decompression_out;
-		buffer_decompression_out.remove(0,tempReturnedData.size());
+		buffer_decompression_out.remove(0,input_size);
+		qDebug() << QString("after: buffer_decompression_out.size(): %1").arg(buffer_decompression_out.size());
 		rawData+=tempReturnedData;
 		successLoop++;
 	} while((quint32)buffer_decompression_out.size()>sizeof(quint32));

@@ -20,7 +20,7 @@ QByteArray HeaderCompressedSizeCompressionTcpSocket::decompressData(const QByteA
 {
 	m_errorString="";
 	QByteArray rawData,chunk,tempReturnedData;
-	int returnSize,compressedDataSize;
+	int compressedDataSize;
 	int successLoop;
 	buffer_decompression_out.append(compressedData);
 	if(buffer_decompression_out.size()>(maxCompressedSize(maxSize)+sizeof(quint32)))
@@ -29,6 +29,7 @@ QByteArray HeaderCompressedSizeCompressionTcpSocket::decompressData(const QByteA
 		m_errorString="buffer is more than maxSize";
 		return QByteArray();
 	}
+	int input_size,output_size;
 	successLoop=0;
 	do
 	{
@@ -54,12 +55,15 @@ QByteArray HeaderCompressedSizeCompressionTcpSocket::decompressData(const QByteA
 		chunk=buffer_decompression_out.mid(0,compressedDataSize);
 		buffer_decompression_out.remove(0,chunk.size());
 
-		returnSize=decompressDataWithoutHeader(chunk,&tempReturnedData,maxSize);
-		if(returnSize<=0)
+		output_size=maxSize;
+		input_size=chunk.size();
+		if(!decompressDataWithoutHeader(chunk,&tempReturnedData,&input_size,&output_size) || input_size!=chunk.size())
 		{
-			m_errorString=QString("Error at decompressing: %1").arg(returnSize);
-			continue;
+			m_errorString=QString("Error at decompressing: %1").arg(input_size);
+			break;
 		}
+		/// \bug crash here, I don't see why
+		tempReturnedData.resize(output_size);
 		rawData+=tempReturnedData;
 		successLoop++;
 	} while((quint32)buffer_decompression_out.size()>sizeof(quint32));

@@ -10,7 +10,7 @@ public:
 	Lz4CompressionTcpSocket();
 protected:
 	virtual QByteArray compressDataWithoutHeader(const QByteArray rawData);
-	virtual int decompressDataWithoutHeader(const QByteArray &source,QByteArray *destination);
+	virtual bool decompressDataWithoutHeader(const QByteArray &source,QByteArray *destination,int *isize,int *osize);
 	int maxCompressedSize(const int &maxSize);
 private:
 	int QLZ4_uncompress_unknownOutputSize(const QByteArray &source,QByteArray *destination,const int &maxOutputSize);

@@ -720,12 +720,12 @@ _output_error:
 int LZ4_uncompress_unknownOutputSize(
 				const char* source,
 				char* dest,
-				int isize,
+				int *isize,
 				int maxOutputSize)
 {	
 	// Local Variables
 	const BYTE* restrict ip = (const BYTE*) source;
-	const BYTE* const iend = ip + isize;
+	const BYTE* const iend = ip + *isize;
 	const BYTE* restrict ref;
 
 	BYTE* restrict op = (BYTE*) dest;
@@ -798,6 +798,7 @@ int LZ4_uncompress_unknownOutputSize(
 	}
 
 	// end of decoding
+	*isize = ip - (const BYTE*) source;
 	return (int) (((char*)op)-dest);
 
 	// write overflow error detected
