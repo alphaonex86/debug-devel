@@ -265,6 +265,7 @@ QtIOCompressor::~QtIOCompressor()
 {
     Q_D(QtIOCompressor);
     close();
+    delete d_ptr;
     delete d;
 }
 

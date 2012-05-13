@@ -14,6 +14,12 @@ GzipCompressionTcpSocket::GzipCompressionTcpSocket(int bufferSize,int compressio
 		qDebug() << "Unable to open the decompressor";
 }
 
+GzipCompressionTcpSocket::~GzipCompressionTcpSocket()
+{
+	delete decompressor;
+	delete compressor;
+}
+
 void GzipCompressionTcpSocket::abstractBlockingMethod()
 {
 }

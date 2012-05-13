@@ -14,6 +14,12 @@ ZlibCompressionTcpSocket::ZlibCompressionTcpSocket(int bufferSize,int compressio
 		qDebug() << "Unable to open the decompressor";
 }
 
+ZlibCompressionTcpSocket::~ZlibCompressionTcpSocket()
+{
+	delete decompressor;
+	delete compressor;
+}
+
 void ZlibCompressionTcpSocket::abstractBlockingMethod()
 {
 }

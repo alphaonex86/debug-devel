@@ -14,8 +14,10 @@ ZlibAbstractCompressionTcpSocket::ZlibAbstractCompressionTcpSocket(int bufferSiz
 
 ZlibAbstractCompressionTcpSocket::~ZlibAbstractCompressionTcpSocket()
 {
-	delete decompressor;
-	delete compressor;
+	decompressor->close();
+	compressor->close();
+	delete buffer_decompression;
+	delete buffer_compression;
 }
 
 QByteArray ZlibAbstractCompressionTcpSocket::compressData(const QByteArray &rawData)

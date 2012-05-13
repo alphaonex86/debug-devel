@@ -7,6 +7,7 @@ class GzipCompressionTcpSocket : public ZlibAbstractCompressionTcpSocket
 {
 public:
 	GzipCompressionTcpSocket(int bufferSize=65536,int compression=6,bool byPacket=false);
+	~GzipCompressionTcpSocket();
 private:
 	void abstractBlockingMethod();
 };
