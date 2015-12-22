@@ -1,11 +1,4 @@
-# mainwindows.h
-# -------------------
-# Begin : Mon Nov 29 2008 18:20 alpha_one_x86
-# Project : debug-devel
-# Email : alpha.super-one@laposte.net
-# Note : See doc for copyright and developer
-# Target : Class for do testing of communication
-QT += network
+QT       += gui network xml core widgets
 TARGET = debug-devel-client
 TEMPLATE = app
 SOURCES += main.cpp \
@@ -46,4 +39,4 @@ win32:RC_FILE += resources-windows.rc
 #QMAKE_LIBDIR += qextserialport/build
 #CONFIG(debug, debug|release):LIBS += -lqextserialportd
 #else:LIBS += -lqextserialport
-
+LIBS += -lz

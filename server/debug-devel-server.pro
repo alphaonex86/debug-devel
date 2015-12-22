@@ -1,7 +1,4 @@
-# -------------------------------------------------
-# Project created by QtCreator 2009-06-16T12:00:07
-# -------------------------------------------------
-QT += network
+QT       += gui network xml core widgets
 TARGET = debug-devel-server
 TEMPLATE = app
 SOURCES += main.cpp \
@@ -34,3 +31,4 @@ HEADERS += mainwindow.h \
 FORMS += mainwindow.ui
 win32:RC_FILE += resources-windows.rc
 RESOURCES += resources.qrc
+LIBS += -lz
